@@ -849,4 +849,13 @@
 
   showScreen('title');
   requestAnimationFrame(frame);
+
+  // Offline-Speicher für die installierte App (nur über https/localhost möglich)
+  try {
+    if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+      navigator.serviceWorker.register('sw.js').catch(() => {});
+    }
+  } catch (e) {
+    /* nicht verfügbar – Spiel läuft trotzdem */
+  }
 })();

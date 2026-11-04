@@ -3,7 +3,16 @@
 Ein eigenständiger Bastel-Plattformer im Browser: Pappe, Stoff, Filz und Knöpfe.
 Du spielst **Knopf**, ein Wollknäuel mit Knopfaugen und Bommelmütze.
 
-## iOS-App (iPhone & iPad)
+## Auf dem iPad spielen (ohne Mac)
+
+1. In Safari öffnen: **https://wolfiebu-ship-it.github.io/Little-Big-planet/**
+2. Teilen-Symbol (□↑) → **„Zum Home-Bildschirm“** → Hinzufügen.
+3. Craft World über das neue Icon starten: Vollbild, funktioniert danach auch offline.
+
+Die Seite wird bei jedem Push automatisch neu veröffentlicht (`.github/workflows/pages.yml`).
+Einmalig muss GitHub Pages aktiviert sein: Repo → *Settings* → *Pages* → *Source*: **GitHub Actions**.
+
+## iOS-App mit Xcode (optional, braucht einen Mac)
 
 Im Ordner `ios/` liegt eine native SwiftUI-App:
 
