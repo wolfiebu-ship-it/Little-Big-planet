@@ -4,8 +4,8 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
   <meta name="theme-color" content="#3b2a1e" />
-  <title>Fadenwelt</title>
-  <meta name="description" content="Fadenwelt – ein Bastel-Plattformer aus Pappe, Stoff und Knöpfen mit Level-Editor." />
+  <title>Craft World</title>
+  <meta name="description" content="Craft World – ein Bastel-Plattformer aus Pappe, Stoff und Knöpfen mit Level-Editor." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet" />
@@ -17,7 +17,18 @@
   <div id="ui">
     <!-- Hauptmenü -->
     <section id="scr-title" class="screen">
-      <h1 class="logo">Fadenwelt</h1>
+      <div class="neon-sign">
+        <svg class="logo-tree" viewBox="0 0 120 140" aria-hidden="true">
+          <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <path class="neon" d="M60 134 L60 74 M60 104 L43 88 M60 94 L77 80 M60 134 Q49 133 42 138 M60 134 Q71 133 78 138" />
+            <circle class="neon fill" cx="35" cy="60" r="18" />
+            <circle class="neon fill" cx="85" cy="60" r="18" />
+            <circle class="neon fill" cx="60" cy="44" r="27" />
+            <path class="neon thin" d="M44 26 Q68 42 50 68 M58 18 Q86 38 74 64 M36 42 Q56 48 66 70" />
+          </g>
+        </svg>
+        <h1 class="logo" aria-label="Craft World"><span>Craft</span> <span>World</span></h1>
+      </div>
       <p class="tagline">Ein Bastel-Abenteuer aus Pappe, Stoff und Knöpfen</p>
       <canvas id="title-char" width="200" height="200"></canvas>
       <nav class="menu">
@@ -134,7 +145,7 @@
     </div>
   </div>
 
-  <noscript><p style="color:#fff;padding:20px">Fadenwelt braucht JavaScript.</p></noscript>
+  <noscript><p style="color:#fff;padding:20px">Craft World braucht JavaScript.</p></noscript>
   <script src="js/engine.js"></script>
   <script src="js/levels.js"></script>
   <script src="js/render.js"></script>

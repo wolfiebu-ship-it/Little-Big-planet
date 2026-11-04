@@ -1,5 +1,5 @@
 /*
- * Fadenwelt – Hauptsteuerung: Menüs, Eingabe, Spielschleife, Speichern.
+ * Craft World – Hauptsteuerung: Menüs, Eingabe, Spielschleife, Speichern.
  */
 (function () {
   'use strict';
@@ -35,6 +35,19 @@
     return n;
   };
 
+  // Brücke zur nativen iOS-App (Craft World für iPhone/iPad). Im Browser ohne Wirkung.
+  const native = (name, payload) => {
+    try {
+      const h = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers[name];
+      if (!h) return false;
+      h.postMessage(payload);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  };
+  const isNativeApp = !!(window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.haptic);
+
   const G = {
     mode: 'menu',
     screen: 'title',
@@ -46,7 +59,7 @@
     touch: false,
     demo: null
   };
-  window.FadenweltGame = G;
+  window.CraftWorldGame = G;
 
   /* ---------------- Einstellungen & Kostüm ---------------- */
   const HEX = /^#[0-9a-f]{6}$/i;
@@ -325,25 +338,31 @@
         inline: true,
         buttons: [
           { label: '📋 Kopieren', value: 'copy', cls: 'blue' },
-          { label: '💾 Als Datei', value: 'file', cls: 'green' },
+          { label: isNativeApp ? '📤 Teilen' : '💾 Als Datei', value: 'file', cls: 'green' },
           { label: 'Schließen', value: 'cancel', cls: 'grey' }
         ]
       });
       if (r.value === 'copy') {
-        let ok = false;
-        try {
-          await navigator.clipboard.writeText(json);
-          ok = true;
-        } catch (e) {
-          ok = false;
+        let ok = native('copy', json);
+        if (!ok) {
+          try {
+            await navigator.clipboard.writeText(json);
+            ok = true;
+          } catch (e) {
+            ok = false;
+          }
         }
         note = ok ? 'Kopiert ✓ – füge den Text z. B. in eine Nachricht ein.' : 'Kopieren wurde vom Browser blockiert. Markiere den Text und kopiere ihn von Hand.';
       } else if (r.value === 'file') {
+        if (native('share', { name: (data.name || 'level').replace(/[^\wäöüÄÖÜß-]+/g, '_') + '.craftworld.json', text: json })) {
+          note = 'Teilen-Menü geöffnet ✓';
+          continue;
+        }
         try {
           const blob = new Blob([json], { type: 'application/json' });
           const a = document.createElement('a');
           a.href = URL.createObjectURL(blob);
-          a.download = (data.name || 'level').replace(/[^\wäöüÄÖÜß-]+/g, '_') + '.fadenwelt.json';
+          a.download = (data.name || 'level').replace(/[^\wäöüÄÖÜß-]+/g, '_') + '.craftworld.json';
           document.body.appendChild(a);
           a.click();
           setTimeout(() => {
@@ -411,7 +430,7 @@
       } else text = r.text;
       const d = parseLevel(text);
       if (d) return d;
-      note = '⚠ Das sieht nicht nach einem Fadenwelt-Level aus. Bitte prüfe den Text.';
+      note = '⚠ Das sieht nicht nach einem Craft-World-Level aus. Bitte prüfe den Text.';
     }
   };
 
@@ -690,8 +709,10 @@
   }
 
   const SFX = { collect: 'collect', prize: 'prize', jump: 'jump', die: 'die', respawn: 'respawn', checkpoint: 'checkpoint', goal: 'goal', spring: 'spring', stomp: 'stomp', layer: 'layer', bump: 'bump', grab: 'grab', boxland: 'land' };
+  const HAPTIC = { die: 'error', goal: 'success', stomp: 'heavy', spring: 'heavy', prize: 'success', checkpoint: 'light', bump: 'light' };
   function drain(W) {
     for (const e of W.events) {
+      if (isNativeApp && HAPTIC[e.type]) native('haptic', HAPTIC[e.type]);
       R.handleEvent(e, W);
       if (e.type === 'land') {
         if (e.v > 500) A.play('land');

@@ -1,5 +1,5 @@
 /*
- * Fadenwelt – Klänge. Alles wird live mit WebAudio erzeugt (keine Dateien).
+ * Craft World – Klänge. Alles wird live mit WebAudio erzeugt (keine Dateien).
  */
 (function (root) {
   'use strict';

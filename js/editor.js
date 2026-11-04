@@ -1,5 +1,5 @@
 /*
- * Fadenwelt – Level-Editor ("Erstellen"-Modus)
+ * Craft World – Level-Editor ("Erstellen"-Modus)
  */
 (function (root) {
   'use strict';

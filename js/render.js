@@ -1,5 +1,5 @@
 /*
- * Fadenwelt – Renderer (Canvas 2D). Alles wird prozedural gezeichnet:
+ * Craft World – Renderer (Canvas 2D). Alles wird prozedural gezeichnet:
  * Pappe, Stoff, Filz, Knöpfe – keine externen Grafiken nötig.
  */
 (function (root) {
@@ -736,7 +736,7 @@
     g2.lineWidth = 2;
     g2.stroke();
     g2.fillStyle = '#5a3a1d';
-    g2.font = 'bold 15px Fredoka, sans-serif';
+    g2.font = 'bold 15px Fredoka, ui-rounded, sans-serif';
     g2.textAlign = 'center';
     g2.textBaseline = 'middle';
     g2.fillText('?', px + 20, py + 13);
@@ -1165,7 +1165,7 @@
       const a = Math.max(0, p.life / p.max);
       g.globalAlpha = a;
       if (p.kind === 'text') {
-        g.font = 'bold 18px Fredoka, sans-serif';
+        g.font = 'bold 18px Fredoka, ui-rounded, sans-serif';
         g.textAlign = 'center';
         g.textBaseline = 'middle';
         g.lineWidth = 4;
@@ -1322,7 +1322,7 @@
     const pw = sm ? 128 : 170;
     panel(12, top, pw, sm ? 44 : 52);
     g.fillStyle = '#5a3a1d';
-    g.font = 'bold ' + (sm ? 22 : 28) + 'px Fredoka, sans-serif';
+    g.font = 'bold ' + (sm ? 22 : 28) + 'px Fredoka, ui-rounded, sans-serif';
     g.textAlign = 'left';
     g.textBaseline = 'middle';
     g.fillText(String(W.score), 26, top + (sm ? 22 : 26));
@@ -1333,7 +1333,7 @@
       g.arc(bx + 20, by + 20, 20 + Math.sin(t * 10) * 1.5, 0, 7);
       g.fill();
       g.fillStyle = '#fff';
-      g.font = 'bold 18px Fredoka, sans-serif';
+      g.font = 'bold 18px Fredoka, ui-rounded, sans-serif';
       g.textAlign = 'center';
       g.fillText('x' + W.mult, bx + 20, by + 21);
       g.strokeStyle = '#fff';
@@ -1350,7 +1350,7 @@
     const cy = top + (sm ? 22 : 26);
     drawBubble(g, rx + 22, cy, 9, t, false);
     g.fillStyle = '#5a3a1d';
-    g.font = 'bold ' + (sm ? 15 : 18) + 'px Fredoka, sans-serif';
+    g.font = 'bold ' + (sm ? 15 : 18) + 'px Fredoka, ui-rounded, sans-serif';
     g.textAlign = 'left';
     g.fillText(W.bubbles + '/' + W.totalBubbles, rx + 36, cy + 1);
     const sx = rx + (sm ? 100 : 118);
@@ -1412,7 +1412,7 @@
 
   function drawHint(text) {
     const sm = Wd < 600;
-    g.font = (sm ? 15 : 19) + 'px Fredoka, sans-serif';
+    g.font = (sm ? 15 : 19) + 'px Fredoka, ui-rounded, sans-serif';
     const maxW = Math.min(560, Wd - 60);
     const lines = wrapText(text, maxW);
     const lh = sm ? 20 : 25;

@@ -1,5 +1,5 @@
 /*
- * Fadenwelt – Spiel-Engine (Physik & Spiellogik)
+ * Craft World – Spiel-Engine (Physik & Spiellogik)
  * Diese Datei kennt kein DOM. Sie läuft im Browser und in Node (für Tests).
  */
 (function (root) {

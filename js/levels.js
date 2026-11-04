@@ -1,5 +1,5 @@
 /*
- * Fadenwelt – eingebaute Story-Level.
+ * Craft World – eingebaute Story-Level.
  * Die Level werden mit einem kleinen Baukasten erzeugt, damit Koordinaten
  * exakt stimmen. Ergebnis ist dasselbe Format, das auch der Editor speichert.
  */
@@ -59,7 +59,7 @@
     b.fill(2, 78, 12, 80, 14, '#');
 
     b.set(0, 2, 14, 'S');
-    b.sign(0, 4, 14, 'Willkommen in der Fadenwelt! Laufe mit A/D oder ←/→ und springe mit der Leertaste.');
+    b.sign(0, 4, 14, 'Willkommen in Craft World! Laufe mit A/D oder ←/→ und springe mit der Leertaste.');
     b.row(0, 6, 9, 13, 'o');
     b.fill(0, 11, 13, 12, 14, '#');
     b.row(0, 11, 12, 11, 'o');

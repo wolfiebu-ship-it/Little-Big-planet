@@ -1,9 +1,25 @@
-# Fadenwelt 🧶
+# Craft World 🧶
 
 Ein eigenständiger Bastel-Plattformer im Browser: Pappe, Stoff, Filz und Knöpfe.
 Du spielst **Knopf**, ein Wollknäuel mit Knopfaugen und Bommelmütze.
 
-## Starten
+## iOS-App (iPhone & iPad)
+
+Im Ordner `ios/` liegt eine native SwiftUI-App:
+
+1. Auf einem Mac `ios/CraftWorld.xcodeproj` in **Xcode 15 oder neuer** öffnen.
+2. Links das Projekt **CraftWorld** wählen → *Signing & Capabilities* → dein **Team** (Apple-ID) eintragen.
+   Falls Xcode meckert, die *Bundle Identifier* auf etwas Eigenes ändern, z. B. `de.deinname.craftworld`.
+3. iPhone per Kabel anschließen (oder einen Simulator wählen) und auf ▶ drücken.
+
+Die App zeigt beim Start ein Neon-Logo, läuft komplett offline, speichert Spielstände und eigene Level,
+nutzt Haptik (Vibration bei Missgeschicken, Ziel, Federn …) und teilt exportierte Level über das iOS-Teilen-Menü.
+Auf dem iPhone läuft sie im Querformat, auf dem iPad in jeder Ausrichtung. Mindestversion: iOS 16.
+
+Die Spieldateien (`index.html`, `css/`, `js/`) werden direkt aus dem Repo ins App-Bundle kopiert.
+Änderungen am Spiel landen also automatisch in der App.
+
+## Im Browser starten
 
 Keine Installation nötig. Entweder `index.html` direkt im Browser öffnen oder einen kleinen Server starten:
 
@@ -52,3 +68,5 @@ Geprüft werden Level-Format, Physik (Springen, Wände, Ebenen, Kisten, Feuer, F
 | `js/audio.js` | Synthetisierte Klänge & Musik |
 | `js/editor.js` | Level-Editor |
 | `js/main.js` | Menüs, Eingabe, Spielschleife, Speichern |
+| `ios/` | Native iOS-App (SwiftUI): Neon-Startbildschirm, Spielansicht, Haptik, Teilen |
+| `tools/check_xcodeproj.py` | Prüft das Xcode-Projekt auf Syntax- und Verweisfehler |
