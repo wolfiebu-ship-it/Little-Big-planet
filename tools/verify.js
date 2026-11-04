@@ -86,6 +86,15 @@ function run(W, inp, secs) {
   check(maxH > 140 && maxH < 150, 'Sprunghöhe ~145px (' + maxH.toFixed(1) + ')');
 }
 {
+  const W = flat();
+  run(W, { axis: 0.3 }, 1.5);
+  const slow = W.player.vx;
+  run(W, { axis: 1 }, 1);
+  check(slow > 60 && slow < 200 && W.player.vx > 260, 'Analoger Joystick: halb = langsam, voll = schnell (' + slow.toFixed(0) + ' / ' + W.player.vx.toFixed(0) + ')');
+  run(W, { axis: -1 }, 1);
+  check(W.player.vx < -260 && W.player.facing === -1, 'Joystick nach links');
+}
+{
   const W = flat((b) => b.fill(0, 6, 8, 6, 10, '#'));
   run(W, { right: true }, 2);
   check(W.player.x + C.PW <= 6 * 40 + 0.01, 'Wände blockieren');
@@ -209,7 +218,8 @@ class Heap {
 const WAYPOINTS = {
   l1: [[30, 14], [44, 10], [74, 14]],
   l2: [[14, 8], [42, 8], [47, 16], [57, 15], [60, 12], [84, 12], [97, 16]],
-  l3: [[12, 33], [13, 27], [24, 20], [33, 20]]
+  l3: [[12, 33], [13, 27], [24, 20], [33, 20]],
+  l4: [[11, 13], [14, 12], [17, 13], [22, 16], [34, 16], [40, 16], [51, 12], [57, 9], [74, 16], [86, 8]]
 };
 
 function findGoal(W) {

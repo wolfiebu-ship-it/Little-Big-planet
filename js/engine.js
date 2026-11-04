@@ -526,9 +526,15 @@
       }
     }
 
-    const dir = (inp.right ? 1 : 0) - (inp.left ? 1 : 0);
+    let dir = (inp.right ? 1 : 0) - (inp.left ? 1 : 0);
+    let mag = 1;
+    // Analoger Joystick: Auslenkung bestimmt das Tempo
+    if (typeof inp.axis === 'number' && Math.abs(inp.axis) > 0.15) {
+      dir = inp.axis > 0 ? 1 : -1;
+      mag = Math.min(1, 0.35 + ((Math.abs(inp.axis) - 0.15) / 0.6) * 0.65);
+    }
     const acc = P.grounded ? C.ACC_G : C.ACC_A;
-    const maxV = P.grab ? C.BOX_DRAG : C.RUN;
+    const maxV = (P.grab ? C.BOX_DRAG : C.RUN) * mag;
     if (dir !== 0) {
       if (P.vx * dir < 0 && P.grounded) P.vx += dir * C.FRIC_G * dt;
       P.vx += dir * acc * dt;

@@ -20,6 +20,9 @@ targets:
       - path: ../js
         type: folder
         buildPhase: resources
+      - path: ../vendor
+        type: folder
+        buildPhase: resources
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.craftworld.game

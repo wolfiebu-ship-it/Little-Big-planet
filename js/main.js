@@ -4,7 +4,7 @@
 (function () {
   'use strict';
   const FW = window.FW;
-  const C = FW.C, R = FW.Render, A = FW.Audio, E = FW.Editor;
+  const C = FW.C, R = FW.Render, R3 = FW.Render3D, A = FW.Audio, E = FW.Editor;
 
   /* ---------------- Speicher (robust, falls blockiert) ---------------- */
   const Store = {
@@ -71,6 +71,7 @@
   const savedLook = Store.get('fw_look', null);
   if (savedLook && typeof savedLook === 'object') {
     for (const k of ['body', 'hat', 'eye']) if (HEX.test(savedLook[k])) R.look[k] = savedLook[k];
+    if (FW.CHARACTERS && FW.CHARACTERS.some((c) => c.id === savedLook.char)) R.look.char = savedLook.char;
   }
   const settings = Object.assign({ music: true, sfx: true }, Store.get('fw_settings', {}));
   A.setMusic(settings.music !== false);
@@ -99,7 +100,8 @@
     for (const s of Object.values(src)) for (const k in s) s[k] = false;
     recompute();
     for (const k in latch) latch[k] = false;
-    $$('.tbtn.on').forEach((b) => b.classList.remove('on'));
+    $$('.tbtn.on').forEach((b) => b.classList.toggle('on', false));
+    if (G.releaseJoy) G.releaseJoy();
     E.releaseKeys();
   }
   G.releaseInput = releaseAll;
@@ -115,6 +117,8 @@
       downP: latch.downP,
       grabP: latch.grabP
     };
+    if (joy.active) inp.axis = joy.ax;
+    else if (padAxis !== null) inp.axis = padAxis;
     latch.jumpP = latch.upP = latch.downP = latch.grabP = false;
     return inp;
   }
@@ -188,6 +192,8 @@
 
   // Gamepad
   let padPause = false;
+  let padAxis = null;
+  const joy = { active: false, ax: 0, id: null };
   function pollPad() {
     const pads = navigator.getGamepads ? navigator.getGamepads() : [];
     let p = null;
@@ -196,6 +202,7 @@
       break;
     }
     if (!p) {
+      padAxis = null;
       if (Object.values(src.pad).some(Boolean)) {
         src.pad = {};
         recompute();
@@ -204,9 +211,10 @@
     }
     const b = (i) => !!(p.buttons[i] && p.buttons[i].pressed);
     const ax = p.axes[0] || 0, ay = p.axes[1] || 0;
+    padAxis = Math.abs(ax) > 0.2 ? ax : null;
     src.pad = {
-      left: ax < -0.4 || b(14),
-      right: ax > 0.4 || b(15),
+      left: b(14),
+      right: b(15),
       jump: b(0),
       grab: b(2) || b(5) || b(7),
       up: b(12) || ay < -0.85,
@@ -246,6 +254,58 @@
       btn.addEventListener('lostpointercapture', () => off());
       btn.addEventListener('contextmenu', (e) => e.preventDefault());
     });
+    // Joystick: links/rechts laufen (analog), nach oben = Ebene nach hinten, nach unten = nach vorne
+    const base = $('#joy'), knob = $('#joy-knob');
+    const joyMove = (e) => {
+      const r = base.getBoundingClientRect();
+      const rad = r.width / 2;
+      let dx = (e.clientX - (r.left + rad)) / rad, dy = (e.clientY - (r.top + rad)) / rad;
+      const m = Math.hypot(dx, dy);
+      if (m > 1) {
+        dx /= m;
+        dy /= m;
+      }
+      knob.style.transform = 'translate(' + dx * rad * 0.62 + 'px,' + dy * rad * 0.62 + 'px)';
+      joy.ax = dx;
+      const vertical = Math.abs(dy) > Math.abs(dx) * 0.8;
+      src.touch.up = src.touch.up ? dy < -0.35 : dy < -0.62 && vertical;
+      src.touch.down = src.touch.down ? dy > 0.35 : dy > 0.62 && vertical;
+      base.classList.toggle('up', !!src.touch.up);
+      base.classList.toggle('down', !!src.touch.down);
+      recompute();
+    };
+    const joyEnd = (e) => {
+      if (e && joy.id !== e.pointerId) return;
+      joy.active = false;
+      joy.id = null;
+      joy.ax = 0;
+      knob.style.transform = '';
+      src.touch.up = src.touch.down = false;
+      base.classList.toggle('up', false);
+      base.classList.toggle('down', false);
+      base.classList.toggle('on', false);
+      recompute();
+    };
+    base.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      A.init();
+      try {
+        base.setPointerCapture(e.pointerId);
+      } catch (err) {
+        /* ignorieren */
+      }
+      joy.active = true;
+      joy.id = e.pointerId;
+      base.classList.add('on');
+      joyMove(e);
+    });
+    base.addEventListener('pointermove', (e) => {
+      if (joy.active && e.pointerId === joy.id) joyMove(e);
+    });
+    base.addEventListener('pointerup', joyEnd);
+    base.addEventListener('pointercancel', joyEnd);
+    base.addEventListener('lostpointercapture', joyEnd);
+    G.releaseJoy = () => joyEnd();
     G.touch = (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) || 'ontouchstart' in window;
     window.addEventListener('pointerdown', (e) => {
       if (e.pointerType === 'touch' && !G.touch) {
@@ -569,17 +629,37 @@
     }
   }
 
+  function saveLook() {
+    Store.set('fw_look', R.look);
+  }
   function renderCostume() {
+    const list = $('#char-list');
+    list.innerHTML = '';
+    for (const ch of FW.CHARACTERS || []) {
+      const b = el('button', 'char' + ((R.look.char || 'knopf') === ch.id ? ' on' : ''));
+      b.appendChild(el('b', '', ch.name));
+      b.appendChild(el('span', '', ch.blurb));
+      b.addEventListener('click', () => {
+        R.look.char = ch.id;
+        R.look.body = ch.body;
+        R.look.hat = ch.acc;
+        saveLook();
+        A.play('place');
+        renderCostume();
+      });
+      list.appendChild(b);
+    }
+    $('#eye-row').classList.toggle('hidden', (R.look.char || 'knopf') !== 'knopf');
     $$('.sw').forEach((box) => {
       const part = box.dataset.part;
       box.innerHTML = '';
       for (const col of PALETTE[part]) {
-        const b = el('button', col.toLowerCase() === R.look[part].toLowerCase() ? 'on' : '');
+        const b = el('button', col.toLowerCase() === String(R.look[part]).toLowerCase() ? 'on' : '');
         b.style.background = col;
         b.setAttribute('aria-label', part + ' ' + col);
         b.addEventListener('click', () => {
           R.look[part] = col;
-          Store.set('fw_look', R.look);
+          saveLook();
           A.play('place');
           renderCostume();
         });
@@ -607,6 +687,10 @@
     R.setLevel(G.W.L);
     R.clearFx();
     R.resetCamera(G.W);
+    if (use3D) {
+      R3.clearFx();
+      R3.resetCamera(G.W);
+    }
     G.mode = 'play';
     G.screen = 'play';
     G.paused = false;
@@ -713,7 +797,8 @@
   function drain(W) {
     for (const e of W.events) {
       if (isNativeApp && HAPTIC[e.type]) native('haptic', HAPTIC[e.type]);
-      R.handleEvent(e, W);
+      if (use3D) R3.handleEvent(e, W);
+      else R.handleEvent(e, W);
       if (e.type === 'land') {
         if (e.v > 500) A.play('land');
       } else if (SFX[e.type]) A.play(SFX[e.type], e);
@@ -776,9 +861,26 @@
   /* ---------------- Hauptschleife ---------------- */
   const canvas = $('#game');
   R.init(canvas);
+  const canvas3d = $('#game3d');
+  let use3D = false;
+  try {
+    use3D = !!(R3 && R3.init && R3.init(canvas3d));
+  } catch (e) {
+    use3D = false;
+  }
+  if (!use3D) canvas3d.classList.add('hidden');
+  G.use3D = use3D;
+  let titlePrev = null, costumePrev = null;
+  if (use3D) {
+    titlePrev = R3.createPreview($('#title-char'));
+    costumePrev = R3.createPreview($('#costume-char'));
+  }
   E.setup(G);
   setupTouch();
-  window.addEventListener('resize', () => R.resize());
+  window.addEventListener('resize', () => {
+    R.resize();
+    if (use3D) R3.resize();
+  });
   window.addEventListener('orientationchange', () => setTimeout(() => R.resize(), 200));
   document.addEventListener('pointerdown', () => A.init(), { once: true });
 
@@ -807,8 +909,11 @@
             n++;
           }
           if (n >= 14) acc = 0;
-          R.update(dt, W);
-          R.updateCamera(W, dt);
+          if (use3D) R3.update(dt, W);
+          else {
+            R.update(dt, W);
+            R.updateCamera(W, dt);
+          }
           if (W.finished) {
             G.finishT += dt;
             if (G.finishT > 1.6 && !G.resultShown) {
@@ -817,9 +922,14 @@
             }
           }
         }
-        R.drawGame(W, t);
+        if (use3D) {
+          canvas3d.classList.toggle('hidden', false);
+          R3.render(W, t, dt);
+          R.clearOverlay();
+        } else R.drawGame(W, t);
         R.drawHUD(W, t, { rightPad: 56 });
       } else if (G.mode === 'editor') {
+        if (use3D) canvas3d.classList.toggle('hidden', true);
         E.update(dt);
         E.draw(t);
       } else if (G.demo) {
@@ -833,10 +943,18 @@
         const span = Math.max(0, D.L.w * C.T - 2 * hw);
         R.cam.x = hw + span * (0.5 - 0.5 * Math.cos(t * 0.03));
         R.cam.y = D.L.h * C.T - sz.h / 2 / R.cam.zoom + 10;
-        R.update(dt, D);
-        R.drawGame(D, t);
-        if (G.screen === 'title') R.drawPreview(titleChar, R.look, t);
-        if (G.screen === 'costume') R.drawPreview(costumeChar, R.look, t);
+        if (use3D) {
+          canvas3d.classList.toggle('hidden', false);
+          R3.update(dt, D);
+          const span = Math.max(0, D.L.w - 14);
+          R3.render(D, t, dt, { demoX: 7 + span * (0.5 - 0.5 * Math.cos(t * 0.03)) });
+          R.clearOverlay();
+        } else {
+          R.update(dt, D);
+          R.drawGame(D, t);
+        }
+        if (G.screen === 'title') titlePrev ? titlePrev.render(R.look, t) : R.drawPreview(titleChar, R.look, t);
+        if (G.screen === 'costume') costumePrev ? costumePrev.render(R.look, t) : R.drawPreview(costumeChar, R.look, t);
       }
     } catch (err) {
       // Ein Fehler beim Zeichnen darf das Spiel nicht einfrieren

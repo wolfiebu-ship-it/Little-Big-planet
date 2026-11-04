@@ -106,6 +106,9 @@
     b.row(2, 95, 103, 13, 'o');
     b.set(2, 104, 13, '*');
     b.row(0, 104, 106, 13, 'o');
+    b.set(0, 47, 10, 'E'); // Käfer auf der hohen Kante
+    b.set(0, 101, 14, '^').set(0, 102, 14, '^');
+    b.set(0, 99, 14, 'E');
     b.set(0, 108, 14, 'G');
     return b.build();
   }
@@ -137,6 +140,8 @@
     b.fill(0, 10, 10, 11, 10, 'o');
 
     b.row(0, 14, 19, 7, 'o');
+    b.set(0, 18, 8, 'E');
+    b.set(0, 20, 8, '^');
     b.sign(0, 21, 8, 'Feuer! Spring drüber – oder weich in die hintere Ebene aus.');
     b.fill(0, 24, 8, 26, 8, 'f');
     b.row(0, 24, 26, 5, 'o');
@@ -166,6 +171,7 @@
 
     b.set(0, 84, 12, 'C');
     b.set(0, 86, 12, '^');
+    b.set(0, 91, 12, '^');
     b.set(0, 89, 12, 'E');
     b.set(0, 93, 12, 'E');
     b.row(0, 87, 94, 10, 'o');
@@ -173,10 +179,10 @@
     b.set(0, 97, 16, 'C');
     b.sign(0, 96, 16, 'Stacheln! Hüpf über die Stoffbretter.');
     b.row(0, 100, 101, 14, '=');
-    b.row(0, 104, 105, 13, '=');
+    b.row(0, 104, 104, 13, '=');
     b.row(0, 108, 109, 14, '=');
     b.row(0, 100, 101, 12, 'o');
-    b.row(0, 104, 105, 11, 'o');
+    b.row(0, 104, 104, 11, 'o');
     b.row(0, 108, 109, 12, 'o');
     b.row(2, 110, 114, 16, 'o');
     b.set(2, 113, 15, '*');
@@ -200,7 +206,8 @@
     b.set(0, 36, 40, 'E');
     b.row(0, 6, 13, 34, '=');
     b.row(0, 9, 12, 33, 'o');
-    b.row(0, 15, 18, 31, '=');
+    b.row(0, 15, 17, 31, '=');
+    b.set(0, 12, 33, '^');
     b.row(0, 15, 18, 30, 'o');
     b.row(0, 12, 15, 28, '=');
     b.row(0, 12, 14, 27, 'o');
@@ -210,6 +217,7 @@
 
     b.sign(0, 23, 20, 'Die Wand steht nur vorne – geh nach hinten (W/↑)!');
     b.fill(0, 29, 15, 30, 20, '#');
+    b.set(1, 33, 20, 'E');
     b.row(1, 26, 32, 20, 'o');
     b.set(1, 28, 17, '*');
     b.fill(2, 26, 17, 28, 20, '#');
@@ -221,6 +229,7 @@
     b.row(0, 41, 41, 10, 'o');
     b.row(0, 36, 46, 8, '=');
     b.set(0, 43, 7, 'E');
+    b.set(0, 38, 7, '^');
     b.set(0, 46, 7, '*');
     b.row(0, 37, 40, 7, 'o');
     b.row(0, 30, 35, 5, '=');
@@ -232,10 +241,75 @@
     return b.build();
   }
 
+  /* ---------------- Level 4: Nadelschlucht (schwer) ---------------- */
+  function level4() {
+    const b = builder('Nadelschlucht', 1, 100, 20);
+    b.all((z) => {
+      b.ground(z, 0, 8, 17);
+      b.ground(z, 9, 20, 17);
+      b.row(z, 9, 20, 16, '^');
+      b.ground(z, 44, 55, 17);
+      b.row(z, 44, 55, 16, '^');
+      b.fill(z, 56, 10, 70, 19, '#');
+      b.ground(z, 71, 99, 17);
+      b.row(z, 78, 99, 16, '^');
+      b.row(z, 85, 99, 9, 'H');
+    });
+    b.ground(0, 21, 43, 17);
+    b.ground(1, 21, 43, 17);
+    b.ground(2, 21, 33, 17);
+    b.ground(2, 41, 43, 17);
+    // Säulen über den Stacheln
+    b.all((z) => {
+      b.fill(z, 11, 14, 11, 16, 'H');
+      b.fill(z, 14, 13, 14, 16, 'H');
+      b.fill(z, 17, 14, 17, 16, 'H');
+      b.fill(z, 51, 13, 51, 16, 'H');
+    });
+    b.set(0, 2, 16, 'S');
+    b.sign(0, 4, 16, 'Profi-Level! Hier zählt jeder Sprung. Viel Glück!');
+    b.set(0, 11, 12, 'o').set(0, 14, 11, 'o').set(0, 17, 12, 'o');
+    b.set(0, 14, 9, '*');
+    b.set(0, 22, 16, 'C');
+    b.set(0, 26, 16, 'E');
+    b.set(0, 29, 16, 'f');
+    b.set(0, 32, 16, 'E');
+    b.row(0, 25, 33, 13, 'o');
+    b.set(2, 27, 16, '*');
+    b.row(2, 23, 31, 15, 'o');
+    // Ebenen-Rätsel: vorne Wand, mitte Stacheln, hinten Abgrund
+    b.sign(0, 34, 16, 'Vorne eine Wand, hinten ein Loch – nimm die Mitte und spring!');
+    b.fill(0, 36, 6, 37, 16, 'H');
+    b.set(1, 36, 16, '^').set(1, 37, 16, '^');
+    b.row(1, 35, 38, 13, 'o');
+    b.set(0, 40, 16, 'C');
+    // Fahrt über das Stachelbett
+    b.set(0, 43, 14, 'M');
+    b.row(0, 45, 49, 12, 'o');
+    b.set(0, 53, 15, 'V');
+    b.row(0, 53, 54, 9, 'o');
+    b.set(0, 57, 9, 'C');
+    b.set(0, 61, 9, 'E');
+    b.set(0, 63, 9, '^');
+    b.set(0, 67, 9, 'E');
+    b.row(0, 59, 69, 7, 'o');
+    b.set(1, 68, 9, '*');
+    // Feder zum Ziel
+    b.sign(0, 72, 16, 'Die Feder bringt dich nach oben. Unten warten nur Nadeln!');
+    b.set(0, 74, 16, 'J');
+    b.row(0, 76, 84, 9, '=');
+    b.set(0, 80, 8, 'E');
+    b.row(0, 77, 83, 6, 'o');
+    b.row(0, 86, 92, 7, 'o');
+    b.set(0, 96, 8, 'G');
+    return b.build();
+  }
+
   FW.LEVELS = [
     { id: 'l1', blurb: 'Lerne laufen, springen, Ebenen wechseln und Kisten schieben.', data: level1() },
     { id: 'l2', blurb: 'Aufzüge, Feuer und Käfer in einer verrückten Fabrik.', data: level2() },
-    { id: 'l3', blurb: 'Ein hoher Kletterberg mit Federn und Plattformen.', data: level3() }
+    { id: 'l3', blurb: 'Ein hoher Kletterberg mit Federn und Plattformen.', data: level3() },
+    { id: 'l4', blurb: 'Schwer! Säulensprünge über Nadeln, Ebenen-Rätsel und Fahrten über das Stachelbett.', data: level4() }
   ];
 
   // Leeres Level für den Editor

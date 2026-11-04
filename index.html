@@ -19,23 +19,42 @@
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
+  <canvas id="game3d" aria-hidden="true"></canvas>
   <canvas id="game" aria-label="Spielfläche"></canvas>
 
   <div id="ui">
     <!-- Hauptmenü -->
     <section id="scr-title" class="screen">
-      <div class="neon-sign">
-        <svg class="logo-tree" viewBox="0 0 120 140" aria-hidden="true">
-          <g fill="none" stroke-linecap="round" stroke-linejoin="round">
-            <path class="neon" d="M60 134 L60 74 M60 104 L43 88 M60 94 L77 80 M60 134 Q49 133 42 138 M60 134 Q71 133 78 138" />
-            <circle class="neon fill" cx="35" cy="60" r="18" />
-            <circle class="neon fill" cx="85" cy="60" r="18" />
-            <circle class="neon fill" cx="60" cy="44" r="27" />
-            <path class="neon thin" d="M44 26 Q68 42 50 68 M58 18 Q86 38 74 64 M36 42 Q56 48 66 70" />
+      <svg class="sticker-logo" viewBox="0 0 1000 270" role="img" aria-label="Craft World">
+        <defs>
+          <linearGradient id="lgFill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#6fd6ff" />
+            <stop offset="0.55" stop-color="#1fa3ef" />
+            <stop offset="1" stop-color="#0b6fc2" />
+          </linearGradient>
+          <filter id="lgShadow" x="-10%" y="-20%" width="120%" height="150%">
+            <feDropShadow dx="0" dy="8" stdDeviation="7" flood-color="#06223d" flood-opacity="0.45" />
+          </filter>
+        </defs>
+        <g transform="rotate(-4 460 130)" filter="url(#lgShadow)">
+          <g class="tree" transform="translate(30 18) scale(1.55)">
+            <g stroke="#ffffff" stroke-width="22" stroke-linejoin="round" stroke-linecap="round" fill="#ffffff">
+              <path d="M60 134 L60 74 M60 104 L43 88 M60 94 L77 80 M42 138 L78 138" />
+              <circle cx="35" cy="60" r="18" /><circle cx="85" cy="60" r="18" /><circle cx="60" cy="44" r="27" />
+            </g>
+            <g stroke="#0b6fc2" stroke-width="8" stroke-linecap="round" fill="none">
+              <path d="M60 134 L60 74 M60 104 L43 88 M60 94 L77 80 M44 136 Q60 130 76 136" />
+            </g>
+            <circle cx="35" cy="60" r="18" fill="url(#lgFill)" stroke="#0b6fc2" stroke-width="4" />
+            <circle cx="85" cy="60" r="18" fill="url(#lgFill)" stroke="#0b6fc2" stroke-width="4" />
+            <circle cx="60" cy="44" r="27" fill="url(#lgFill)" stroke="#0b6fc2" stroke-width="4" />
+            <path d="M44 26 Q68 42 50 68 M58 18 Q86 38 74 64 M36 42 Q56 48 66 70" stroke="#e9f8ff" stroke-width="3" fill="none" stroke-linecap="round" />
           </g>
-        </svg>
-        <h1 class="logo" aria-label="Craft World"><span>Craft</span> <span>World</span></h1>
-      </div>
+          <text x="235" y="178" class="lg-text lg-back">Craft World</text>
+          <text x="235" y="178" class="lg-text lg-front">Craft World</text>
+          <text x="235" y="178" class="lg-text lg-stitch">Craft World</text>
+        </g>
+      </svg>
       <p class="tagline">Ein Bastel-Abenteuer aus Pappe, Stoff und Knöpfen</p>
       <canvas id="title-char" width="200" height="200"></canvas>
       <nav class="menu">
@@ -75,14 +94,18 @@
     <section id="scr-costume" class="screen hidden">
       <h2 class="title">Kostüm</h2>
       <div class="card costume">
-        <canvas id="costume-char" width="220" height="220"></canvas>
+        <canvas id="costume-char" width="240" height="240"></canvas>
         <div class="swatches">
-          <label>Wolle</label>
+          <label>Figur</label>
+          <div class="chars" id="char-list"></div>
+          <label>Stoff</label>
           <div class="sw" data-part="body"></div>
-          <label>Mütze</label>
+          <label>Zubehör</label>
           <div class="sw" data-part="hat"></div>
-          <label>Knopfaugen</label>
-          <div class="sw" data-part="eye"></div>
+          <div id="eye-row">
+            <label>Knopfaugen</label>
+            <div class="sw" data-part="eye"></div>
+          </div>
         </div>
       </div>
       <button class="btn grey" data-act="back">← Fertig</button>
@@ -95,6 +118,7 @@
         <table>
           <tr><th>Laufen</th><td><kbd>A</kbd>/<kbd>D</kbd> oder <kbd>←</kbd>/<kbd>→</kbd></td></tr>
           <tr><th>Springen</th><td><kbd>Leertaste</kbd> (länger halten = höher)</td></tr>
+          <tr><th>Touch</th><td>Joystick links: laufen; nach oben = Ebene nach hinten, nach unten = nach vorne</td></tr>
           <tr><th>Ebene nach hinten</th><td><kbd>W</kbd> oder <kbd>↑</kbd></td></tr>
           <tr><th>Ebene nach vorne</th><td><kbd>S</kbd> oder <kbd>↓</kbd></td></tr>
           <tr><th>Greifen &amp; Ziehen</th><td><kbd>Shift</kbd> oder <kbd>E</kbd> halten</td></tr>
@@ -110,13 +134,12 @@
     <!-- Im Spiel -->
     <button id="btn-pause" class="hud-btn hidden" aria-label="Pause">❚❚</button>
     <div id="touch" class="hidden">
-      <div class="tpad left">
-        <button class="tbtn" data-k="left" aria-label="Links">◀</button>
-        <button class="tbtn" data-k="right" aria-label="Rechts">▶</button>
-      </div>
-      <div class="tpad layer">
-        <button class="tbtn small" data-k="up" aria-label="Ebene nach hinten">⤒</button>
-        <button class="tbtn small" data-k="down" aria-label="Ebene nach vorne">⤓</button>
+      <div class="joy" id="joy" aria-label="Joystick: links und rechts laufen, nach oben Ebene nach hinten, nach unten Ebene nach vorne">
+        <span class="joy-hint up">▲</span>
+        <span class="joy-hint down">▼</span>
+        <span class="joy-hint left">◀</span>
+        <span class="joy-hint right">▶</span>
+        <div class="knob" id="joy-knob"></div>
       </div>
       <div class="tpad right">
         <button class="tbtn grab" data-k="grab" aria-label="Greifen">✊</button>
@@ -156,6 +179,8 @@
   <script src="js/engine.js"></script>
   <script src="js/levels.js"></script>
   <script src="js/render.js"></script>
+  <script src="vendor/three.min.js"></script>
+  <script src="js/render3d.js"></script>
   <script src="js/audio.js"></script>
   <script src="js/editor.js"></script>
   <script src="js/main.js"></script>

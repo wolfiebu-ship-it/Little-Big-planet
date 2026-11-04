@@ -39,14 +39,16 @@ python3 -m http.server 8000
 
 ## Funktionen
 
-- **3 Story-Level**: Pappwiesen (Tutorial), Garnfabrik, Knopfgipfel
+- **2.5D-Grafik**: echte 3D-Welt mit Licht und Schatten (Three.js), gespielt wird seitlich auf 3 Ebenen
+- **4 eigene Stoffpuppen** zur Auswahl: Knopf, Fransi, Socki, Bolzen, jeweils mit eigenen Farben
+- **4 Story-Level**: Pappwiesen (Tutorial), Garnfabrik, Knopfgipfel, Nadelschlucht (schwer)
 - **3 Tiefenebenen**: Wechsle zwischen vorne, Mitte und hinten. Ebenen vor der Figur werden durchsichtig.
 - Kisten **schieben und greifen**, Sprungfedern, bewegliche Plattformen und Aufzüge, Stoffbretter zum Durchspringen
 - Feuer, Stacheln und Filzkäfer (die man zertreten kann)
 - Punkteperlen mit **Kombo-Multiplikator** bis ×5, versteckte Preisblasen, Checkpoints, 1–3 Sterne, Rekorde
 - **Level-Editor** mit 18 Werkzeugen, 3 Ebenen, Rückgängig/Wiederholen, Themen, Größe ändern, Schildern mit eigenem Text, Testen, Speichern sowie Import/Export (Text oder Datei)
 - **Kostüm**: Farben für Wolle, Mütze und Knopfaugen
-- Tastatur, **Gamepad** und **Touch-Steuerung**
+- Tastatur, **Gamepad** und **Touch-Steuerung mit Joystick** (oben/unten wechselt die Ebene)
 - Selbst erzeugte Soundeffekte und Musik (WebAudio, keine Dateien)
 
 ## Steuerung
@@ -73,7 +75,9 @@ Geprüft werden Level-Format, Physik (Springen, Wände, Ebenen, Kisten, Feuer, F
 |---|---|
 | `js/engine.js` | Physik & Spiellogik (ohne DOM, läuft auch in Node) |
 | `js/levels.js` | Story-Level |
-| `js/render.js` | Prozedurale Grafik, Partikel, HUD |
+| `js/render3d.js` | 3D-Welt, Stoffpuppen, Effekte (2.5D) |
+| `js/render.js` | HUD, Editor-Ansicht und 2D-Ersatzgrafik, falls kein WebGL |
+| `vendor/three.min.js` | Three.js r128 (MIT-Lizenz, siehe `vendor/three.LICENSE`) |
 | `js/audio.js` | Synthetisierte Klänge & Musik |
 | `js/editor.js` | Level-Editor |
 | `js/main.js` | Menüs, Eingabe, Spielschleife, Speichern |

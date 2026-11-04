@@ -14,6 +14,7 @@
 		C1A0F7000000000000000015 /* index.html in Resources */ = {isa = PBXBuildFile; fileRef = C1A0F7000000000000000006 /* index.html */; };
 		C1A0F7000000000000000016 /* css in Resources */ = {isa = PBXBuildFile; fileRef = C1A0F7000000000000000007 /* css */; };
 		C1A0F7000000000000000017 /* js in Resources */ = {isa = PBXBuildFile; fileRef = C1A0F7000000000000000008 /* js */; };
+		C1A0F7000000000000000018 /* vendor in Resources */ = {isa = PBXBuildFile; fileRef = C1A0F700000000000000000A /* vendor */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -25,6 +26,7 @@
 		C1A0F7000000000000000006 /* index.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; name = index.html; path = ../index.html; sourceTree = SOURCE_ROOT; };
 		C1A0F7000000000000000007 /* css */ = {isa = PBXFileReference; lastKnownFileType = folder; name = css; path = ../css; sourceTree = SOURCE_ROOT; };
 		C1A0F7000000000000000008 /* js */ = {isa = PBXFileReference; lastKnownFileType = folder; name = js; path = ../js; sourceTree = SOURCE_ROOT; };
+		C1A0F700000000000000000A /* vendor */ = {isa = PBXFileReference; lastKnownFileType = folder; name = vendor; path = ../vendor; sourceTree = SOURCE_ROOT; };
 		C1A0F7000000000000000009 /* CraftWorld.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CraftWorld.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -66,6 +68,7 @@
 				C1A0F7000000000000000006 /* index.html */,
 				C1A0F7000000000000000007 /* css */,
 				C1A0F7000000000000000008 /* js */,
+				C1A0F700000000000000000A /* vendor */,
 			);
 			name = Spiel;
 			sourceTree = "<group>";
@@ -141,6 +144,7 @@
 				C1A0F7000000000000000015 /* index.html in Resources */,
 				C1A0F7000000000000000016 /* css in Resources */,
 				C1A0F7000000000000000017 /* js in Resources */,
+				C1A0F7000000000000000018 /* vendor in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

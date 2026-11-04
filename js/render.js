@@ -72,7 +72,7 @@
   let tmp, tg; // Hilfs-Canvas für das Guckloch
   R.cam = { x: 0, y: 0, zoom: 1, look: 0 };
   R.bottomPad = 0; // Platz für Touch-Knöpfe (Bildschirm-Pixel)
-  R.look = { body: '#e8743b', hat: '#3a7bd5', eye: '#fdf6e3' };
+  R.look = { char: 'knopf', body: '#e8743b', hat: '#3a7bd5', eye: '#fdf6e3' };
 
   R.init = function (canvas) {
     cv = canvas;
@@ -101,6 +101,10 @@
     }
   };
   R.size = () => ({ w: Wd, h: Hd });
+  R.clearOverlay = function () {
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.clearRect(0, 0, cv.width, cv.height);
+  };
   R.autoZoom = function () {
     return Math.max(0.55, Math.min(2.0, Math.min(Hd / 450, Wd / 620)));
   };
