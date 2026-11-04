@@ -118,13 +118,15 @@
         <table>
           <tr><th>Laufen</th><td><kbd>A</kbd>/<kbd>D</kbd> oder <kbd>←</kbd>/<kbd>→</kbd></td></tr>
           <tr><th>Springen</th><td><kbd>Leertaste</kbd> (länger halten = höher)</td></tr>
-          <tr><th>Touch</th><td>Joystick links: laufen; nach oben = Ebene nach hinten, nach unten = nach vorne</td></tr>
+          <tr><th>Ebenen</th><td>wechseln <b>automatisch</b>: Läufst du gegen eine Wand und in einer anderen Ebene geht es weiter, weicht die Figur selbst aus.</td></tr>
+          <tr><th>Touch</th><td>Großer Joystick links zum Laufen, rechts Springen und Greifen</td></tr>
           <tr><th>Ebene nach hinten</th><td><kbd>W</kbd> oder <kbd>↑</kbd></td></tr>
           <tr><th>Ebene nach vorne</th><td><kbd>S</kbd> oder <kbd>↓</kbd></td></tr>
           <tr><th>Greifen &amp; Ziehen</th><td><kbd>Shift</kbd> oder <kbd>E</kbd> halten</td></tr>
           <tr><th>Pause</th><td><kbd>Esc</kbd> oder <kbd>P</kbd></td></tr>
           <tr><th>Gamepad</th><td>Stick/Steuerkreuz, Ⓐ springen, Ⓧ/R greifen, ↑/↓ Ebene, Start Pause</td></tr>
         </table>
+        <p>Jedes <b>Tor</b> hat 4 Lichter. Jedes Missgeschick kostet eins – sind alle aus, ist das Level gescheitert. Ein neues Tor füllt die Lichter wieder auf.</p>
         <p>Sammle <b>Punkteperlen</b> schnell hintereinander für einen Multiplikator bis ×5. <b>Preisblasen</b> sind gut versteckt – oft in einer anderen Ebene! Mit den <b>Checkpoints</b> geht es nach einem Missgeschick dort weiter.</p>
         <p><b>Editor:</b> Linksklick malt, Rechtsklick radiert, Mausrad/Pfeiltasten verschieben, <kbd>Strg</kbd>+Mausrad zoomt, <kbd>1</kbd>–<kbd>3</kbd> wählt die Ebene, <kbd>Strg</kbd>+<kbd>Z</kbd> macht rückgängig. Auf Touch-Geräten verschiebst du mit zwei Fingern.</p>
       </div>
@@ -142,8 +144,18 @@
         <div class="knob" id="joy-knob"></div>
       </div>
       <div class="tpad right">
-        <button class="tbtn grab" data-k="grab" aria-label="Greifen">✊</button>
-        <button class="tbtn jump" data-k="jump" aria-label="Springen">⤊</button>
+        <button class="tbtn grab" data-k="grab" aria-label="Greifen">
+          <svg viewBox="0 0 64 64" aria-hidden="true">
+            <path d="M22 35 V15 a4.5 4.5 0 0 1 9 0 V31 V11 a4.5 4.5 0 0 1 9 0 V31 V14 a4.5 4.5 0 0 1 9 0 V33 V23 a4.5 4.5 0 0 1 9 0 V40 c0 11 -8 18 -19 18 h-3 c-7 0 -11 -3 -15 -9 l-9 -13 a4.5 4.5 0 0 1 7 -5.5 l3 3.5 z" />
+          </svg>
+          <span>Greifen</span>
+        </button>
+        <button class="tbtn jump" data-k="jump" aria-label="Springen">
+          <svg viewBox="0 0 64 64" aria-hidden="true">
+            <path d="M32 10 L52 32 H40 V52 H24 V32 H12 Z" />
+          </svg>
+          <span>Springen</span>
+        </button>
       </div>
     </div>
 

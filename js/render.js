@@ -1551,15 +1551,30 @@
       g.textAlign = 'right';
       g.fillText(fmtTime(W.time), rx + rw - 16, cy + 1);
     }
-    // Ebenenanzeige
+    // Leben am aktuellen Tor (Knopf-Lichter)
     const P = W.player;
-    const lx = Wd / 2 - 30, ly = top + 6;
-    for (let z = C.LAYERS - 1; z >= 0; z--) {
-      const w = 44 - z * 8;
-      g.fillStyle = z === P.z ? '#ffd166' : 'rgba(255,255,255,0.55)';
+    const lives = W.cpLives ? W.cpLives[W.checkpoint.key] : C.CP_LIVES;
+    const n = C.CP_LIVES || 4;
+    const lw = n * 26 + 16;
+    panel(Wd / 2 - lw / 2, top, lw, 40);
+    for (let i = 0; i < n; i++) {
+      const bx = Wd / 2 - lw / 2 + 21 + i * 26, by = top + 20;
+      const on = i < lives;
+      g.fillStyle = on ? '#ffd23f' : '#cbb9a4';
       g.beginPath();
-      roundRect(g, lx + 30 - w / 2, ly + (2 - z) * 9, w, 7, 3);
+      g.arc(bx, by, 9, 0, Math.PI * 2);
       g.fill();
+      if (on) {
+        g.strokeStyle = 'rgba(255,200,40,0.55)';
+        g.lineWidth = 3;
+        g.stroke();
+      }
+      g.fillStyle = on ? 'rgba(120,70,0,0.55)' : 'rgba(80,60,40,0.4)';
+      for (let k = 0; k < 4; k++) {
+        g.beginPath();
+        g.arc(bx + (k % 2 ? 2.4 : -2.4), by + (k < 2 ? -2.4 : 2.4), 1.2, 0, Math.PI * 2);
+        g.fill();
+      }
     }
     // Schild-Hinweis
     const sign = nearbySign(W);

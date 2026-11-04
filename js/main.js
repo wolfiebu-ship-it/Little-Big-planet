@@ -523,7 +523,7 @@
     const play = G.mode === 'play';
     $('#btn-pause').classList.toggle('hidden', !play);
     $('#touch').classList.toggle('hidden', !(play && G.touch));
-    R.bottomPad = play && G.touch ? Math.min(110, window.innerHeight * 0.22) : 0;
+    R.bottomPad = play && G.touch ? Math.min(150, window.innerHeight * 0.24) : 0;
     const ed = G.mode === 'editor';
     ['#ed-top', '#ed-layers', '#ed-palette'].forEach((s) => $(s).classList.toggle('hidden', !ed));
     if (!ed) $('#ed-tip').classList.add('hidden');
@@ -743,6 +743,22 @@
     } else showScreen(m.source === 'my' ? 'my' : 'story');
   }
 
+  async function showFailed() {
+    const m = G.play.meta;
+    const buttons = [{ label: '↻ Nochmal versuchen', value: 'restart', cls: 'green' }];
+    if (m.source === 'editor') buttons.push({ label: '✎ Zurück zum Editor', value: 'editor', cls: 'purple' });
+    else buttons.push({ label: m.source === 'my' ? '☰ Meine Level' : '☰ Level-Auswahl', value: 'list', cls: 'grey' });
+    const r = await G.dialog({
+      title: 'Alle Lichter aus!',
+      text: 'Am Tor sind keine Leben mehr übrig. Jedes Tor hat 4 Lichter – ein neues Tor füllt sie wieder auf.',
+      buttons,
+      escValue: 'restart'
+    });
+    if (r.value === 'restart') restart();
+    else if (r.value === 'editor') openEditor();
+    else showScreen(m.source === 'my' ? 'my' : 'story');
+  }
+
   async function showResults() {
     const W = G.W, m = G.play.meta;
     const rt = FW.rating(W);
@@ -793,7 +809,7 @@
   }
 
   const SFX = { collect: 'collect', prize: 'prize', jump: 'jump', die: 'die', respawn: 'respawn', checkpoint: 'checkpoint', goal: 'goal', spring: 'spring', stomp: 'stomp', layer: 'layer', bump: 'bump', grab: 'grab', boxland: 'land' };
-  const HAPTIC = { die: 'error', goal: 'success', stomp: 'heavy', spring: 'heavy', prize: 'success', checkpoint: 'light', bump: 'light' };
+  const HAPTIC = { failed: 'error', die: 'error', goal: 'success', stomp: 'heavy', spring: 'heavy', prize: 'success', checkpoint: 'light', bump: 'light' };
   function drain(W) {
     for (const e of W.events) {
       if (isNativeApp && HAPTIC[e.type]) native('haptic', HAPTIC[e.type]);
@@ -914,11 +930,12 @@
             R.update(dt, W);
             R.updateCamera(W, dt);
           }
-          if (W.finished) {
+          if (W.finished || W.failed) {
             G.finishT += dt;
-            if (G.finishT > 1.6 && !G.resultShown) {
+            if (G.finishT > (W.failed ? 1.4 : 1.6) && !G.resultShown) {
               G.resultShown = true;
-              showResults();
+              if (W.failed) showFailed();
+              else showResults();
             }
           }
         }

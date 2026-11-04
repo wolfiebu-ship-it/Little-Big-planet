@@ -21,6 +21,7 @@
   let doll = null, dollKey = '';
   const cam = { x: 0, y: 0, z: 0, look: 0, inited: false };
   const anim = { phase: 0, squash: 0, blink: 0, nextBlink: 2, turn: 0 };
+  let gateFlash = 0;
   const springAnim = {};
   let shakeT = 0;
   const texCache = {};
@@ -566,6 +567,57 @@
     return g;
   }
 
+  function buildGate(g, it, isStart) {
+    const S = shared();
+    if (!G.gate) {
+      G.gate = {
+        post: new THREE.CylinderGeometry(0.1, 0.12, 1.5, 12),
+        arch: new THREE.TorusGeometry(0.62, 0.11, 12, 32, Math.PI),
+        bulb: new THREE.SphereGeometry(0.085, 12, 10),
+        fabric: std({ map: texKnit(), color: 0x6d4c8f, roughness: 1 }),
+        startFabric: std({ map: texKnit(), color: 0xc9772e, roughness: 1 }),
+        on: std({ color: 0xfff3a0, emissive: 0xffd23f, emissiveIntensity: 1.2 }),
+        off: std({ color: 0x4a3b30, roughness: 0.6 }),
+        veil: basic({ color: 0x9ff2ff, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false })
+      };
+      G.gate.veilGeo = new THREE.CircleGeometry(0.55, 24, 0, Math.PI);
+    }
+    const Q = G.gate;
+    const fab = isStart ? Q.startFabric : Q.fabric;
+    for (const x of [-0.62, 0.62]) {
+      const post = mesh(Q.post, fab);
+      post.position.set(x, 0.75, 0);
+      g.add(post);
+    }
+    const arch = mesh(Q.arch, fab);
+    arch.position.y = 1.5;
+    g.add(arch);
+    const disc = mesh(S.disc, std({ color: 0xb9a48a }));
+    disc.scale.set(2, 1, 1.3);
+    disc.position.y = 0.035;
+    g.add(disc);
+    // Schimmer-Vorhang im Tor (leuchtet, wenn das Tor aktiv ist)
+    const veil = new THREE.Group();
+    const v1 = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 1.5), Q.veil.clone());
+    v1.position.y = 0.75;
+    const v2 = new THREE.Mesh(Q.veilGeo, v1.material);
+    v2.position.y = 1.5;
+    veil.add(v1, v2);
+    g.add(veil);
+    it.veil = v1.material;
+    // vier Knopf-Lichter = Leben
+    it.bulbs = [];
+    for (let i = 0; i < C.CP_LIVES; i++) {
+      const a = Math.PI * (0.2 + (i / (C.CP_LIVES - 1)) * 0.6);
+      const b = mesh(Q.bulb, Q.off, false);
+      b.position.set(Math.cos(a) * 0.62, 1.5 + Math.sin(a) * 0.62, 0.12);
+      g.add(b);
+      it.bulbs.push(b);
+    }
+    it.gate = true;
+    it.isStart = isStart;
+  }
+
   function makeItem(ch, x, y, z) {
     const S = shared();
     const zc = LZ(z);
@@ -626,18 +678,10 @@
         }
         break;
       }
-      case 'C': {
-        const pole = mesh(S.pole, S.poleMat);
-        pole.position.set(0, 0.85, 0);
-        const flag = mesh(S.flag, S.red);
-        flag.position.set(0.29, 1.5, 0);
-        const disc = mesh(S.disc, std({ color: 0xb9a48a }));
-        disc.position.y = 0.035;
-        g.add(pole, flag, disc);
-        it.flag = flag;
-        it.disc = disc;
+      case 'C':
+      case 'S':
+        buildGate(g, it, ch === 'S');
         break;
-      }
       case 'G': {
         const p1 = mesh(new THREE.CylinderGeometry(0.06, 0.06, 2.4, 8), S.poleMat);
         p1.position.set(-0.65, 1.2, 0);
@@ -687,12 +731,7 @@
         g.add(post, board);
         break;
       }
-      case 'S': {
-        const pad = mesh(S.disc, std({ color: 0xe9c46a }));
-        pad.position.y = 0.035;
-        g.add(pad);
-        break;
-      }
+
       default:
         return null;
     }
@@ -1228,6 +1267,8 @@
         burst(wx(e.x), wy(e.y), LZ(e.z), 30, { color: [FW.Render.look.body, FW.Render.look.hat, '#ffffff'], speed: 5, life: 1.1, size: 0.2, grav: -7, up: 2 });
         break;
       case 'respawn':
+        gateFlash = 0.6;
+        anim.turn = 0;
         burst(wx(e.x), wy(e.y), LZ(e.z), 14, { color: '#ffffff', speed: 2, life: 0.5, size: 0.12 });
         break;
       case 'checkpoint':
@@ -1282,6 +1323,7 @@
       if (springAnim[k] <= 0) delete springAnim[k];
     }
     if (shakeT > 0) shakeT -= dt;
+    if (gateFlash > 0) gateFlash -= dt;
     for (let i = parts.length - 1; i >= 0; i--) {
       const p = parts[i];
       p.life -= dt;
@@ -1393,10 +1435,18 @@
             f.scale.set(f.userData.base, s, f.userData.base);
           }
           break;
-        case 'C': {
-          const active = W.checkpoint.key === it.key;
-          it.flag.material = active ? G.green : G.red;
-          it.flag.rotation.y = Math.sin(t * 4 + it.x) * 0.25;
+        case 'C':
+        case 'S': {
+          const key = it.isStart ? 'start' : it.key;
+          const active = W.checkpoint.key === key;
+          const lives = W.cpLives[key] === undefined ? C.CP_LIVES : W.cpLives[key];
+          const used = active || W.cpLives[key] !== undefined;
+          for (let i = 0; i < it.bulbs.length; i++) {
+            const lit = used ? i < lives : false;
+            it.bulbs[i].material = lit ? G.gate.on : G.gate.off;
+          }
+          const flash = active && gateFlash > 0 ? gateFlash / 0.6 : 0;
+          it.veil.opacity = active ? 0.18 + 0.08 * Math.sin(t * 4) + flash * 0.6 : 0;
           break;
         }
         case 'G':
@@ -1453,7 +1503,14 @@
       sy *= 1 - anim.squash;
       sx *= 1 + anim.squash;
       const base = 0.86;
-      doll.group.scale.set(base * sx, base * sy, base * sx);
+      // Aus dem Tor „ploppen“: von klein auf groß mit kleinem Überschwingen
+      let pop = 1;
+      if (P.spawnT > 0) {
+        const k = 1 - P.spawnT / C.SPAWN_TIME;
+        const c1 = 1.70158, c3 = c1 + 1;
+        pop = Math.max(0.05, 1 + c3 * Math.pow(k - 1, 3) + c1 * Math.pow(k - 1, 2));
+      }
+      doll.group.scale.set(base * sx * pop, base * sy * pop, base * sx * pop);
       poseDoll(doll, { run, phase: anim.phase, air: !P.grounded, vy: P.vy, grab: !!P.grab, blink: anim.blink > 0, t, wave: W.finished ? t : 0 }, dt);
     }
   }

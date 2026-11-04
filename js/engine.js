@@ -37,6 +37,9 @@
     LAYERS: 3,
     STEP: 1 / 120,
     CHAIN_TIME: 1.2,
+    CP_LIVES: 4,
+    SPAWN_TIME: 0.55,
+    AUTO_LAYER_DELAY: 0.1,
     MIN_W: 30,
     MAX_W: 200,
     MIN_H: 14,
@@ -178,6 +181,8 @@
       totalBubbles: 0,
       totalPrizes: 0,
       finished: false,
+      failed: false,
+      cpLives: { start: C.CP_LIVES },
       events: [],
       checkpoint: null
     };
@@ -230,7 +235,9 @@
       jumping: false,
       facing: 1,
       grab: null,
-      dead: 0
+      dead: 0,
+      spawnT: C.SPAWN_TIME,
+      pushT: 0
     };
     updatePlats(W);
     return W;
@@ -248,6 +255,7 @@
     c.plats = W.plats.map((p) => Object.assign({}, p));
     c.enemies = W.enemies.map((e) => Object.assign({}, e));
     c.collected = Object.assign({}, W.collected);
+    c.cpLives = Object.assign({}, W.cpLives);
     c.player = Object.assign({}, W.player);
     if (W.player.grab) c.player.grab = Object.assign({}, W.player.grab);
     c.events = [];
@@ -454,7 +462,7 @@
     inp = inp || NO_INPUT;
     W.t += dt;
     updatePlats(W);
-    if (W.finished) return;
+    if (W.finished || W.failed) return;
     W.time += dt;
     const P = W.player;
     if (P.dead <= 0) carry(W, P);
@@ -497,15 +505,71 @@
     return true;
   }
 
+  // Darf die Figur in Ebene nz stehen? (kein Hindernis an der aktuellen Stelle)
+  function layerFree(W, nz) {
+    const P = W.player;
+    if (nz < 0 || nz >= C.LAYERS) return false;
+    if (rectHitsSolid(W.L, nz, P.x, P.y, P.w, P.h)) return false;
+    for (const k of W.boxes) if (k.z === nz && overlap(P, k)) return false;
+    return true;
+  }
+  function autoLayer(W, nz) {
+    const P = W.player;
+    P.z = nz;
+    P.ground = null;
+    P.pushT = 0;
+    if (P.grab) P.grab = null;
+    ev(W, 'layer', { z: nz, auto: true });
+  }
+  // Gegen eine Wand gelaufen: in die Nachbarebene ausweichen, wenn es dort weitergeht
+  function tryAutoWall(W, dir) {
+    const P = W.player;
+    const fx = P.x + P.w / 2, fy = P.y + P.h + 3;
+    for (const nz of [P.z + 1, P.z - 1]) {
+      if (!layerFree(W, nz)) continue;
+      if (rectHitsSolid(W.L, nz, P.x + dir * 6, P.y, P.w, P.h)) continue;
+      if (!pointSupported(W, nz, fx, fy)) continue;
+      autoLayer(W, nz);
+      return true;
+    }
+    return false;
+  }
+  // Über eine Kante gelaufen: Boden in der Nachbarebene übernehmen
+  function tryAutoEdge(W) {
+    const P = W.player;
+    const fy = P.y + P.h + 2;
+    const top = Math.floor(fy / T) * T;
+    if (top + 0.5 < P.y + P.h - 6) return false; // Boden liegt zu hoch
+    const oldY = P.y;
+    for (const nz of [P.z + 1, P.z - 1]) {
+      if (nz < 0 || nz >= C.LAYERS) continue;
+      const ch = tileAt(W.L, nz, Math.floor((P.x + P.w / 2) / T), Math.floor(fy / T));
+      if (!(FW.isSolid(ch) || ch === '=')) continue;
+      P.y = top - P.h;
+      if (!layerFree(W, nz)) {
+        P.y = oldY;
+        continue;
+      }
+      autoLayer(W, nz);
+      return true;
+    }
+    P.y = oldY;
+    return false;
+  }
+
   function updatePlayer(W, inp, dt) {
     const P = W.player;
     P.zf += (P.z - P.zf) * Math.min(1, dt * 12);
     if (Math.abs(P.z - P.zf) < 0.002) P.zf = P.z;
     if (P.dead > 0) {
       P.dead -= dt;
-      if (P.dead <= 0) respawn(W);
+      if (P.dead <= 0) {
+        if (W.failed) P.dead = 0.001;
+        else respawn(W);
+      }
       return;
     }
+    if (P.spawnT > 0) P.spawnT -= dt;
 
     if (inp.upP) tryLayer(W, P.z + 1);
     if (inp.downP) tryLayer(W, P.z - 1);
@@ -574,6 +638,10 @@
     const grabId = P.grab ? P.grab.id : -1;
     const prevX = P.x;
     const hit = moveX(W, P, P.vx * dt, grabId);
+    if (hit === 'tile' && P.grounded && dir !== 0 && !P.grab) {
+      P.pushT += dt;
+      if (P.pushT >= C.AUTO_LAYER_DELAY) tryAutoWall(W, dir);
+    } else if (!hit) P.pushT = 0;
     if (hit) {
       if (hit !== 'tile' && P.grounded && dir !== 0 && Math.sign(P.vx) === dir) {
         hit.push = dir * C.BOX_PUSH;
@@ -621,6 +689,9 @@
     } else {
       P.grounded = false;
       P.ground = null;
+      if (wasGrounded && !P.jumping && P.vy >= 0 && P.coyote > 0 && tryAutoEdge(W)) {
+        P.vy = 0;
+      }
       if (r.bonk && P.vy < 0) {
         P.vy = 0;
         P.jumping = false;
@@ -719,6 +790,13 @@
     if (P.dead > 0 || W.finished) return;
     P.dead = C.DEAD_TIME;
     W.deaths++;
+    const key = W.checkpoint.key;
+    W.cpLives[key] = (W.cpLives[key] === undefined ? C.CP_LIVES : W.cpLives[key]) - 1;
+    if (W.cpLives[key] < 0) {
+      W.cpLives[key] = 0;
+      W.failed = true;
+      ev(W, 'failed');
+    }
     W.chain = 0;
     W.chainT = 0;
     W.mult = 1;
@@ -742,6 +820,8 @@
     P.dead = 0;
     P.jbuf = 0;
     P.coyote = 0;
+    P.pushT = 0;
+    P.spawnT = C.SPAWN_TIME;
     // Nicht in einer Kiste wiederbeleben
     for (const k of W.boxes) {
       if (k.z === P.z && overlap(P, k)) {
@@ -802,6 +882,7 @@
           const key = z + ',' + tx + ',' + ty;
           if (W.checkpoint.key !== key && rectRect(P, px + 6, py - T, T - 12, 2 * T)) {
             W.checkpoint = cpFromTile(tx, ty, z, key);
+            W.cpLives[key] = C.CP_LIVES;
             ev(W, 'checkpoint', { x: px + T / 2, y: py, z });
           }
         } else if (ch === 'G') {

@@ -95,11 +95,12 @@ function run(W, inp, secs) {
   check(W.player.vx < -260 && W.player.facing === -1, 'Joystick nach links');
 }
 {
-  const W = flat((b) => b.fill(0, 6, 8, 6, 10, '#'));
-  run(W, { right: true }, 2);
-  check(W.player.x + C.PW <= 6 * 40 + 0.01, 'Wände blockieren');
+  const Wb = flat((b) => b.all((z) => b.fill(z, 6, 4, 6, 10, '#')));
+  run(Wb, { right: true }, 2);
+  check(Wb.player.x + C.PW <= 6 * 40 + 0.01 && Wb.player.z === 0, 'Wände in allen Ebenen blockieren');
+  const W = flat((b) => b.fill(0, 6, 4, 6, 10, '#'));
   run(W, { upP: true }, C.STEP);
-  check(W.player.z === 1, 'Ebenenwechsel nach hinten möglich');
+  check(W.player.z === 1, 'Ebenenwechsel von Hand möglich (Taste/Joystick)');
   run(W, { right: true }, 1);
   check(W.player.x > 6 * 40, 'In Ebene 1 an der Wand vorbei');
 }
@@ -111,6 +112,32 @@ function run(W, inp, secs) {
   run(W, { right: true }, 0.2);
   run(W, { downP: true }, C.STEP);
   check(W.player.z === 1 || W.player.x > x, 'Ebenenwechsel in Wand wird verhindert');
+}
+{
+  // Automatischer Ebenenwechsel an einer Wand (nur vorne)
+  const W = flat((b) => b.fill(0, 6, 4, 6, 10, '#'));
+  run(W, { right: true }, 2);
+  check(W.player.z === 1 && W.player.x > 7 * 40, 'Automatischer Ebenenwechsel an einer Wand');
+  // Stufe, die in allen Ebenen gleich ist: kein Wechsel, man muss springen
+  const W2 = flat((b) => b.all((z) => b.fill(z, 6, 10, 6, 10, '#')));
+  run(W2, { right: true }, 1);
+  check(W2.player.z === 0, 'Kein Wechsel, wenn es in keiner Ebene weitergeht');
+  // Kante vorne, hinten geht der Boden weiter
+  const W3 = flat((b) => b.fill(0, 8, 11, 20, 13, '.'));
+  run(W3, { right: true }, 1.5);
+  check(W3.player.z === 1 && W3.player.grounded && W3.deaths === 0, 'Automatisch auf den Boden der Nachbarebene');
+}
+{
+  // Tor-Leben: 4 Wiederbelebungen, beim 5. Missgeschick ist das Level gescheitert
+  const W = flat((b) => b.set(0, 6, 10, 'f'));
+  for (let i = 0; i < 4; i++) {
+    run(W, { right: true }, 1);
+    run(W, {}, 1.3);
+  }
+  check(W.deaths === 4 && !W.failed && W.cpLives.start === 0, 'Vier Leben am Start-Tor');
+  run(W, { right: true }, 1);
+  run(W, {}, 1.3);
+  check(W.failed, 'Fünftes Missgeschick: Level gescheitert');
 }
 {
   const W = flat((b) => b.set(0, 5, 10, 'B'));
@@ -130,7 +157,7 @@ function run(W, inp, secs) {
 {
   const W = flat((b) => b.set(0, 6, 10, 'f'));
   run(W, { right: true }, 0.8);
-  check(W.deaths === 1, 'Feuer ist tödlich');
+  check(W.deaths === 1 && W.cpLives.start === 3, 'Feuer ist tödlich, kostet ein Leben');
   run(W, {}, 1.5);
   check(W.player.dead <= 0 && Math.abs(W.player.x - (2 * 40 + 7)) < 1, 'Wiederbelebung am Start');
 }
