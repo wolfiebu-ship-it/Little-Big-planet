@@ -49,7 +49,7 @@ python3 -m http.server 8000
 - **Level-Editor** mit 18 Werkzeugen, 3 Ebenen, Rückgängig/Wiederholen, Themen, Größe ändern, Schildern mit eigenem Text, Testen, Speichern sowie Import/Export (Text oder Datei)
 - **Kostüm**: Farben für Wolle, Mütze und Knopfaugen
 - Tastatur, **Gamepad** und **Touch-Steuerung mit Joystick** (oben/unten wechselt die Ebene)
-- Selbst erzeugte Soundeffekte und Musik (WebAudio, keine Dateien)
+- **A-cappella-Musik**: künstliche Männer-, Frauen- und Chorstimmen („bam, blim, brum“) plus Mund-Schlagzeug, eigene Komposition, live per WebAudio erzeugt
 
 ## Steuerung
 

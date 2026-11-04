@@ -1,5 +1,5 @@
 /*
- * Craft World – Klänge. Alles wird live mit WebAudio erzeugt (keine Dateien).
+ * Craft World – Klänge und A-cappella-Musik. Alles wird live mit WebAudio erzeugt (keine Dateien).
  */
 (function (root) {
   'use strict';
@@ -29,14 +29,14 @@
     sfxGain.gain.value = sfxOn ? 0.5 : 0;
     sfxGain.connect(master);
     musicGain = ctx.createGain();
-    musicGain.gain.value = musicOn ? 0.16 : 0;
+    musicGain.gain.value = musicOn ? MUSIC_VOL : 0;
     musicGain.connect(master);
     startMusic();
   };
 
   A.setMusic = function (on) {
     musicOn = !!on;
-    if (musicGain) musicGain.gain.setTargetAtTime(musicOn ? 0.16 : 0, ctx.currentTime, 0.1);
+    if (musicGain) musicGain.gain.setTargetAtTime(musicOn ? MUSIC_VOL : 0, ctx.currentTime, 0.1);
   };
   A.setSfx = function (on) {
     sfxOn = !!on;
@@ -146,26 +146,324 @@
     }
   };
 
-  // Kleine fröhliche Endlos-Melodie (eigene Komposition, pentatonisch)
-  const MELODY = [72, 74, 76, 79, 76, 74, 72, null, 74, 76, 79, 81, 79, 76, 74, null, 76, 79, 81, 84, 81, 79, 76, 74, 72, 74, 76, 74, 72, null, 67, null];
-  const BASS = [48, 48, 55, 55, 50, 50, 57, 57];
+  /* ------------------------------------------------------------------ */
+  /* A-cappella-Musik: künstliche Stimmen (Formant-Synthese) + Beatbox   */
+  /* Eigene Komposition: Frauenstimme (Melodie), Männerstimme (Bass),     */
+  /* Chor („Uuh“-Akkorde) und Mund-Schlagzeug.                           */
+  /* ------------------------------------------------------------------ */
+  const MUSIC_VOL = 0.55;
+
+  // Formanten [Frequenz, Bandbreite, Pegel] einer Männerstimme
+  const VOWELS = {
+    a: [[730, 90, 1], [1090, 110, 0.55], [2440, 170, 0.28]],
+    e: [[530, 70, 1], [1840, 110, 0.5], [2480, 170, 0.3]],
+    i: [[300, 60, 1], [2250, 120, 0.45], [3000, 200, 0.3]],
+    o: [[520, 80, 1], [880, 90, 0.55], [2400, 170, 0.22]],
+    u: [[320, 60, 1], [800, 80, 0.4], [2250, 160, 0.18]]
+  };
+  const ONSET = {
+    b: { f: [240, 0.82, 0.9], glide: 0.045 },
+    bl: { f: [330, 1150, 2650], abs: true, glide: 0.085 },
+    br: { f: [360, 1100, 1550], abs: true, glide: 0.095 }
+  };
+  const VOICE = {
+    m: { scale: 1, gain: 1, vib: 5.2 },
+    f: { scale: 1.17, gain: 0.85, vib: 5.8 },
+    c: { scale: 1.1, gain: 0.5, vib: 4.6 }
+  };
+
+  let noiseBuf = null;
+  function getNoise(ac) {
+    if (noiseBuf && noiseBuf.sampleRate === ac.sampleRate) return noiseBuf;
+    const len = ac.sampleRate * 2;
+    noiseBuf = ac.createBuffer(1, len, ac.sampleRate);
+    const d = noiseBuf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    return noiseBuf;
+  }
+  function noiseSrc(ac, t, dur) {
+    const s = ac.createBufferSource();
+    s.buffer = getNoise(ac);
+    s.start(t, Math.random() * 1.5, dur + 0.05);
+    return s;
+  }
+  function makeImpulse(ac, secs, decay) {
+    const len = Math.floor(ac.sampleRate * secs);
+    const buf = ac.createBuffer(2, len, ac.sampleRate);
+    for (let c = 0; c < 2; c++) {
+      const d = buf.getChannelData(c);
+      for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, decay);
+    }
+    return buf;
+  }
+  const hz = (m) => 440 * Math.pow(2, (m - 69) / 12);
+
+  // Ein gesungener Laut wie „blam“, „brum“, „bim“ oder „uu“
+  function sing(B, t, midi, dur, syl, voiceType, vol) {
+    const ac = B.ac;
+    const m = /^(bl|br|b)?([aeiou])(m)?$/.exec(syl) || [null, null, 'u', null];
+    const onset = m[1] ? ONSET[m[1]] : null, vowel = VOWELS[m[2]], coda = m[3];
+    const V = VOICE[voiceType];
+    const f0 = hz(midi) * Math.pow(2, ((Math.random() - 0.5) * 14) / 1200);
+    const end = t + dur;
+
+    // Stimmbänder: Sägezahn mit leichtem Hochziehen in den Ton und Vibrato
+    const src = ac.createOscillator();
+    src.type = 'sawtooth';
+    src.frequency.setValueAtTime(f0, t);
+    src.detune.setValueAtTime(-70, t);
+    src.detune.linearRampToValueAtTime(0, t + 0.07);
+    const lfo = ac.createOscillator();
+    lfo.frequency.value = V.vib + Math.random() * 0.6;
+    const lfoG = ac.createGain();
+    lfoG.gain.setValueAtTime(0, t);
+    lfoG.gain.linearRampToValueAtTime(dur > 0.35 ? 22 : 7, t + Math.min(dur, 0.45));
+    lfo.connect(lfoG);
+    lfoG.connect(src.detune);
+    // Atem
+    const br = noiseSrc(ac, t, dur);
+    const brF = ac.createBiquadFilter();
+    brF.type = 'highpass';
+    brF.frequency.value = 1800;
+    const brG = ac.createGain();
+    brG.gain.value = 0.05;
+    br.connect(brF);
+    brF.connect(brG);
+
+    const tilt = ac.createBiquadFilter();
+    tilt.type = 'lowpass';
+    tilt.Q.value = 0.5;
+    tilt.frequency.setValueAtTime(3200, t);
+    src.connect(tilt);
+    brG.connect(tilt);
+
+    // Mundraum: drei Formant-Filter
+    const sum = ac.createGain();
+    sum.gain.value = 0.9;
+    vowel.forEach((fm, i) => {
+      const target = fm[0] * V.scale;
+      const bp = ac.createBiquadFilter();
+      bp.type = 'bandpass';
+      bp.Q.value = target / fm[1];
+      if (onset) {
+        const start = onset.abs ? onset.f[i] * V.scale : onset.f[i] * (i === 0 ? V.scale : target);
+        bp.frequency.setValueAtTime(start, t);
+        bp.frequency.linearRampToValueAtTime(target, t + onset.glide);
+      } else bp.frequency.setValueAtTime(target, t);
+      if (coda) {
+        // „-m“: Mund schließt, es wird gesummt
+        const cs = t + dur * 0.62;
+        bp.frequency.setValueAtTime(target, cs);
+        bp.frequency.linearRampToValueAtTime([260, 1000, 2200][i] * V.scale, cs + 0.06);
+      }
+      const g = ac.createGain();
+      g.gain.value = fm[2] * 3;
+      tilt.connect(bp);
+      bp.connect(g);
+      g.connect(sum);
+    });
+    if (coda) {
+      tilt.frequency.setValueAtTime(3200, t + dur * 0.62);
+      tilt.frequency.linearRampToValueAtTime(650, t + dur * 0.62 + 0.07);
+    }
+
+    // Lautstärke-Hüllkurve
+    const env = ac.createGain();
+    const v = vol * V.gain;
+    const att = onset ? 0.012 : 0.12;
+    env.gain.setValueAtTime(0, t);
+    env.gain.linearRampToValueAtTime(v, t + att + 0.02);
+    if (coda) env.gain.linearRampToValueAtTime(v * 0.55, t + dur * 0.62 + 0.08);
+    env.gain.setValueAtTime(coda ? v * 0.55 : v, Math.max(t + att + 0.03, end - 0.07));
+    env.gain.linearRampToValueAtTime(0, end);
+    sum.connect(env);
+    env.connect(B.bus);
+    env.connect(B.rev);
+
+    // Lippenplosiv „b“
+    if (onset) {
+      const p = noiseSrc(ac, t, 0.03);
+      const pf = ac.createBiquadFilter();
+      pf.type = 'lowpass';
+      pf.frequency.value = 700;
+      const pg = ac.createGain();
+      pg.gain.setValueAtTime(v * 0.7, t);
+      pg.gain.exponentialRampToValueAtTime(0.0001, t + 0.025);
+      p.connect(pf);
+      pf.connect(pg);
+      pg.connect(B.bus);
+    }
+    src.start(t);
+    lfo.start(t);
+    src.stop(end + 0.05);
+    lfo.stop(end + 0.05);
+  }
+
+  // Mund-Schlagzeug
+  function beat(B, t, kind, vol) {
+    const ac = B.ac;
+    if (kind === 'b') {
+      // Bass-„b“ mit den Lippen
+      const o = ac.createOscillator();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(150, t);
+      o.frequency.exponentialRampToValueAtTime(48, t + 0.13);
+      const g = ac.createGain();
+      g.gain.setValueAtTime(vol, t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.2);
+      o.connect(g);
+      g.connect(B.bus);
+      o.start(t);
+      o.stop(t + 0.22);
+      const n = noiseSrc(ac, t, 0.03);
+      const f = ac.createBiquadFilter();
+      f.type = 'lowpass';
+      f.frequency.value = 900;
+      const ng = ac.createGain();
+      ng.gain.setValueAtTime(vol * 0.5, t);
+      ng.gain.exponentialRampToValueAtTime(0.0001, t + 0.03);
+      n.connect(f);
+      f.connect(ng);
+      ng.connect(B.bus);
+    } else if (kind === 'k') {
+      // „Pff/K“-Snare
+      const n = noiseSrc(ac, t, 0.18);
+      const f = ac.createBiquadFilter();
+      f.type = 'bandpass';
+      f.frequency.value = 2300;
+      f.Q.value = 0.7;
+      const g = ac.createGain();
+      g.gain.setValueAtTime(vol, t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
+      n.connect(f);
+      f.connect(g);
+      g.connect(B.bus);
+      g.connect(B.rev);
+    } else {
+      // „ts“-Hi-Hat
+      const n = noiseSrc(ac, t, 0.06);
+      const f = ac.createBiquadFilter();
+      f.type = 'highpass';
+      f.frequency.value = 6500;
+      const g = ac.createGain();
+      g.gain.setValueAtTime(vol, t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + (kind === 'tss' ? 0.12 : 0.04));
+      n.connect(f);
+      f.connect(g);
+      g.connect(B.bus);
+    }
+  }
+
+  // Eigene Komposition, 104 BPM, Achtel mit leichtem Swing.
+  // Akkorde: C – Am – F – G. Jede Zeile = ein Takt mit 8 Achteln.
+  const BPM = 104;
+  const STEP = 60 / BPM / 2;
+  const CHORDS = [[48, 64, 67], [45, 64, 69], [41, 65, 69], [43, 62, 67]];
+  const LEAD = [
+    [[72, 'bam', 2], null, [76, 'blim', 1], [74, 'blam', 2], null, [72, 'bum', 1], [67, 'bram', 2], null],
+    [[69, 'blum', 2], null, [72, 'blam', 1], [76, 'blim', 1], [74, 'blam', 2], null, [72, 'bum', 2], null],
+    [[69, 'bram', 1], [72, 'brum', 1], [74, 'brum', 1], [72, 'brum', 2], null, [69, 'blam', 1], [67, 'blum', 2], null],
+    [[71, 'blam', 2], null, [74, 'blam', 1], [71, 'blum', 1], [67, 'bam', 2], null, [67, 'bum', 2], null]
+  ];
+  // Antwort der Männerstimme in jedem zweiten Durchgang
+  const ANSWER = [
+    [null, null, null, null, [60, 'bram', 1], [64, 'brum', 1], [62, 'brum', 1], [60, 'brum', 1]],
+    [null, null, null, null, [57, 'blam', 1], [60, 'blum', 1], [57, 'blam', 1], [55, 'blam', 1]],
+    [null, null, null, null, [57, 'bram', 1], [60, 'brum', 1], [62, 'brum', 1], [60, 'brum', 1]],
+    [null, null, null, null, [59, 'blam', 1], [62, 'blum', 1], [55, 'bam', 1], [55, 'bum', 1]]
+  ];
+  const BASS = [[0, 'bum', 2], [3, 'bom', 1], [4, 'bum', 2], [6, 'bam', 1], [7, 'bom', 1]];
+
+  function scheduleStep(B, t, n) {
+    const bar = Math.floor(n / 8) % 4;
+    const st = n % 8;
+    const round = Math.floor(n / 32);
+    const jit = () => (Math.random() - 0.5) * 0.012;
+    // Beatbox
+    if (st === 0 || st === 5) beat(B, t + jit(), 'b', 0.9);
+    if (st === 2 || st === 6) beat(B, t + jit(), 'k', 0.5);
+    beat(B, t + jit(), st === 7 ? 'tss' : 'ts', st % 2 ? 0.16 : 0.24);
+    // Männerstimme: Bass
+    const root = CHORDS[bar][0];
+    for (const [s, syl, len] of BASS) {
+      if (s === st) {
+        const off = syl === 'bom' ? 7 : syl === 'bam' ? 12 : 0;
+        sing(B, t + jit(), root + off, STEP * len * 0.92, syl, 'm', 0.55);
+      }
+    }
+    // Chor: „Uuh“-Akkord pro Takt (erst ab dem zweiten Durchgang)
+    if (st === 0 && round >= 1) {
+      const ch = CHORDS[bar];
+      sing(B, t + 0.02 + Math.random() * 0.03, ch[1], STEP * 7.6, 'u', 'c', 0.32);
+      sing(B, t + 0.03 + Math.random() * 0.03, ch[2], STEP * 7.6, 'o', 'c', 0.28);
+      sing(B, t + 0.01 + Math.random() * 0.03, ch[0] + 12, STEP * 7.6, 'u', 'm', 0.18);
+    }
+    // Frauenstimme: Melodie (jede dritte Runde Pause, damit es nicht nervt)
+    if (round % 3 !== 2) {
+      const ln = LEAD[bar][st];
+      if (ln) sing(B, t + jit(), ln[0], STEP * ln[2] * 0.9, ln[1], 'f', 0.62);
+    }
+    // Männerstimme: Antwort
+    if (round % 2 === 1) {
+      const an = ANSWER[bar][st];
+      if (an) sing(B, t + jit(), an[0], STEP * an[2] * 0.85, an[1], 'm', 0.42);
+    }
+  }
+
+  function makeBus(ac, dest) {
+    const comp = ac.createDynamicsCompressor();
+    comp.threshold.value = -18;
+    comp.ratio.value = 3;
+    comp.attack.value = 0.01;
+    comp.release.value = 0.2;
+    comp.connect(dest);
+    const bus = ac.createGain();
+    bus.gain.value = 0.6;
+    bus.connect(comp);
+    const conv = ac.createConvolver();
+    conv.buffer = makeImpulse(ac, 1.6, 2.6);
+    const rev = ac.createGain();
+    rev.gain.value = 0.22;
+    rev.connect(conv);
+    conv.connect(comp);
+    return { ac, bus, rev };
+  }
+
+  let B = null;
   function startMusic() {
     if (musicTimer || !ctx) return;
-    nextNote = ctx.currentTime + 0.2;
+    B = makeBus(ctx, musicGain);
+    nextNote = ctx.currentTime + 0.25;
+    noteIdx = 0;
     musicTimer = setInterval(() => {
-      if (!ctx) return;
-      while (nextNote < ctx.currentTime + 0.3) {
-        const beat = 0.24;
-        const m = MELODY[noteIdx % MELODY.length];
-        if (m) tone(midi(m), beat * 0.9, 'triangle', 0.25, nextNote, null, musicGain);
-        if (noteIdx % 4 === 0) {
-          const b = BASS[Math.floor(noteIdx / 4) % BASS.length];
-          tone(midi(b), beat * 3.5, 'sine', 0.35, nextNote, null, musicGain);
-        }
-        if (noteIdx % 2 === 1) tone(midi(96), 0.03, 'square', 0.03, nextNote, null, musicGain);
-        nextNote += beat;
+      if (!ctx || ctx.state !== 'running') return;
+      if (nextNote < ctx.currentTime) nextNote = ctx.currentTime + 0.05;
+      while (nextNote < ctx.currentTime + 0.35) {
+        if (musicOn) scheduleStep(B, nextNote + (noteIdx % 2 ? STEP * 0.12 : 0), noteIdx);
+        nextNote += STEP;
         noteIdx++;
       }
-    }, 100);
+    }, 90);
   }
+
+  // Für Tests: rendert die Musik offline und liefert Pegel-Werte
+  A.renderTest = async function (seconds) {
+    const OAC = root.OfflineAudioContext || root.webkitOfflineAudioContext;
+    const sr = 44100;
+    const off = new OAC(2, Math.ceil(sr * seconds), sr);
+    const TB = makeBus(off, off.destination);
+    const steps = Math.floor(seconds / STEP);
+    for (let n = 0; n < steps; n++) scheduleStep(TB, 0.1 + n * STEP + (n % 2 ? STEP * 0.12 : 0), n);
+    const buf = await off.startRendering();
+    const d = buf.getChannelData(0);
+    let peak = 0, sum = 0, nan = 0;
+    for (let i = 0; i < d.length; i++) {
+      const v = d[i];
+      if (!isFinite(v)) nan++;
+      const a = Math.abs(v);
+      if (a > peak) peak = a;
+      sum += v * v;
+    }
+    return { peak, rms: Math.sqrt(sum / d.length), nan, buffer: buf };
+  };
 })(typeof window !== 'undefined' ? window : globalThis);

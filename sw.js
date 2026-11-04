@@ -1,5 +1,5 @@
 /* Craft World – Offline-Speicher. Bei jeder Änderung am Spiel VERSION erhöhen. */
-const VERSION = 'craftworld-v5';
+const VERSION = 'craftworld-v6';
 const SHELL = [
   './', './index.html', './manifest.webmanifest', './css/style.css',
   './js/engine.js', './js/levels.js', './js/render.js', './js/render3d.js', './js/audio.js', './js/editor.js', './js/main.js',
