@@ -14,15 +14,18 @@
       name: 'Wiese',
       sky: ['#7cc8f5', '#e8f6ff'],
       hill: ['#a8d98f', '#86c470'],
-      ground: '#cf9f62',
-      groundShade: 'rgba(120,75,30,0.13)',
-      groundDark: '#9c6d36',
-      top: '#6cb94a',
-      topDark: '#4b8f2f',
+      ground: '#d39a55',
+      groundShade: 'rgba(110,60,20,0.10)',
+      groundDark: '#8a5a26',
+      top: '#5fb83d',
+      topDark: '#3f8a26',
       wood: '#a8693a',
       woodDark: '#6e4021',
       cloth: ['#e2574c', '#fff3e0'],
-      fog: 'rgba(225,242,255,0.20)',
+      fog: 'rgba(200,230,255,0.07)',
+      patch: ['#e76f51', '#2a9d8f', '#e9c46a', '#8e5fc4'],
+      flowers: ['#ff5d8f', '#ffd166', '#ffffff', '#9b5de5'],
+      tuft: '#4f9a35',
       sun: '#ffd84d'
     },
     {
@@ -37,7 +40,10 @@
       wood: '#946038',
       woodDark: '#5e391c',
       cloth: ['#3d8ed9', '#f6e7c8'],
-      fog: 'rgba(70,40,90,0.20)',
+      fog: 'rgba(70,40,90,0.08)',
+      patch: ['#3d8ed9', '#e76f51', '#f2c14e', '#2a9d8f'],
+      flowers: ['#ffd166', '#ff8fab', '#90e0ef'],
+      tuft: '#5f4f8c',
       sun: '#ffb36b'
     },
     {
@@ -52,7 +58,11 @@
       wood: '#9a5f34',
       woodDark: '#633a1b',
       cloth: ['#9b59d0', '#ffffff'],
-      fog: 'rgba(235,244,255,0.24)',
+      fog: 'rgba(235,244,255,0.08)',
+      patch: ['#9b59d0', '#3d8ed9', '#e63946', '#2a9d8f'],
+      flowers: ['#ffffff', '#a0c4ff', '#ffc6ff'],
+      tuft: '#dbe9f7',
+      snow: true,
       sun: '#fff1a8'
     }
   ];
@@ -87,11 +97,12 @@
     if (Math.abs(cs - chunkScale) > 0.01) {
       chunkScale = cs;
       cache.clear();
+      shadowCache.clear();
     }
   };
   R.size = () => ({ w: Wd, h: Hd });
   R.autoZoom = function () {
-    return Math.max(0.5, Math.min(1.8, Math.min(Hd / 560, Wd / 760)));
+    return Math.max(0.55, Math.min(2.0, Math.min(Hd / 450, Wd / 620)));
   };
 
   /* ------------------------------------------------------------------ */
@@ -103,9 +114,30 @@
   let curL = null;
   const MAX_CHUNKS = 90;
 
+  const shadowCache = new Map();
+  function getShadow(L, z, cx, cy) {
+    const c = getChunk(L, z, cx, cy);
+    if (!c) return null;
+    const key = z + ':' + cx + ':' + cy;
+    let sh = shadowCache.get(key);
+    if (sh && sh.src === c) return sh.cv;
+    const cv2 = document.createElement('canvas');
+    cv2.width = c.width;
+    cv2.height = c.height;
+    const sg = cv2.getContext('2d');
+    sg.drawImage(c, 0, 0);
+    sg.globalCompositeOperation = 'source-in';
+    sg.fillStyle = 'rgba(25,12,0,1)';
+    sg.fillRect(0, 0, cv2.width, cv2.height);
+    shadowCache.set(key, { src: c, cv: cv2 });
+    if (shadowCache.size > MAX_CHUNKS) shadowCache.delete(shadowCache.keys().next().value);
+    return cv2;
+  }
+
   R.setLevel = function (L) {
     curL = L;
     cache.clear();
+    shadowCache.clear();
   };
   R.invalidate = function (z, x, y) {
     for (let dy = -1; dy <= 1; dy++) {
@@ -117,6 +149,7 @@
   };
   R.invalidateAll = function () {
     cache.clear();
+    shadowCache.clear();
   };
 
   function solidAt(L, z, x, y) {
@@ -195,10 +228,14 @@
       const wood = ch === 'H';
       const up = solidAt(L, z, x, y - 1), dn = solidAt(L, z, x, y + 1);
       const lf = solidAt(L, z, x - 1, y), rt = solidAt(L, z, x + 1, y);
-      g2.fillStyle = wood ? th.wood : th.ground;
+      let depth = 0;
+      while (depth < 5 && y - depth - 1 >= 0 && solidAt(L, z, x, y - depth - 1)) depth++;
+      const base = wood ? th.wood : th.ground;
+      g2.fillStyle = shade(base, -Math.min(depth, 5) * 0.045);
       g2.fillRect(px, py, T, T);
+      const hv = hash(x, y);
       if (wood) {
-        g2.strokeStyle = 'rgba(60,30,10,0.25)';
+        g2.strokeStyle = 'rgba(50,25,8,0.28)';
         g2.lineWidth = 1.5;
         for (let i = 0; i < 3; i++) {
           const yy = py + 8 + i * 12 + hash(x, y + i) * 4;
@@ -207,46 +244,153 @@
           g2.bezierCurveTo(px + 14, yy - 3, px + 26, yy + 3, px + T - 2, yy);
           g2.stroke();
         }
-        g2.fillStyle = 'rgba(40,20,5,0.35)';
+        g2.fillStyle = 'rgba(40,20,5,0.4)';
         g2.fillRect(px, py + T / 2 - 1, T, 2);
-        g2.fillStyle = '#d9c7a5';
+        g2.fillStyle = 'rgba(255,255,255,0.08)';
+        g2.fillRect(px, py + 1, T, 3);
+        g2.fillStyle = '#e8d6b0';
         g2.beginPath();
-        g2.arc(px + 6, py + 6, 2, 0, 7);
-        g2.arc(px + T - 6, py + T - 6, 2, 0, 7);
+        g2.arc(px + 6, py + 6, 2.2, 0, 7);
+        g2.arc(px + T - 6, py + T - 6, 2.2, 0, 7);
         g2.fill();
       } else {
+        // feine Wellpappe
         g2.fillStyle = th.groundShade;
-        for (let i = 0; i < 4; i++) g2.fillRect(px + 3 + i * 10, py, 4, T);
-        if (hash(x, y) > 0.82) {
-          g2.fillStyle = 'rgba(255,255,255,0.18)';
-          g2.fillRect(px + 8, py + 14, 16, 8);
+        for (let i = 0; i < 8; i++) g2.fillRect(px + 1 + i * 5, py, 2, T);
+        if (depth >= 1 && hv > 0.88) {
+          // aufgenähter Stoff-Flicken
+          const col = th.patch[Math.floor(hash(x + 3, y + 9) * th.patch.length)];
+          const ox = px + 5 + hash(x, y + 1) * 6, oy = py + 5 + hash(x + 1, y) * 6;
+          g2.save();
+          g2.translate(ox + 13, oy + 11);
+          g2.rotate((hash(x + 5, y) - 0.5) * 0.5);
+          g2.fillStyle = 'rgba(0,0,0,0.18)';
+          g2.beginPath();
+          roundRect(g2, -12, -9, 27, 23, 4);
+          g2.fill();
+          g2.fillStyle = col;
+          g2.beginPath();
+          roundRect(g2, -13, -11, 26, 22, 4);
+          g2.fill();
+          g2.restore();
+          g2.save();
+          g2.translate(ox + 13, oy + 11);
+          g2.rotate((hash(x + 5, y) - 0.5) * 0.5);
+          g2.strokeStyle = 'rgba(255,255,255,0.8)';
+          g2.lineWidth = 1.3;
+          g2.setLineDash([3, 3]);
+          g2.beginPath();
+          roundRect(g2, -10, -8, 20, 16, 3);
+          g2.stroke();
+          g2.restore();
+        } else if (depth >= 1 && hv > 0.82) {
+          // eingenähter Knopf
+          const col = th.patch[Math.floor(hash(x + 11, y + 2) * th.patch.length)];
+          const bx = px + 12 + hash(x, y + 4) * 16, by = py + 12 + hash(x + 4, y) * 16;
+          g2.fillStyle = 'rgba(0,0,0,0.2)';
+          g2.beginPath();
+          g2.arc(bx + 1.5, by + 2, 7, 0, 7);
+          g2.fill();
+          g2.fillStyle = col;
+          g2.beginPath();
+          g2.arc(bx, by, 7, 0, 7);
+          g2.fill();
+          g2.strokeStyle = 'rgba(0,0,0,0.25)';
+          g2.lineWidth = 1.2;
+          g2.beginPath();
+          g2.arc(bx, by, 5, 0, 7);
+          g2.stroke();
+          g2.fillStyle = 'rgba(0,0,0,0.45)';
+          for (let i = 0; i < 4; i++) {
+            g2.beginPath();
+            g2.arc(bx + (i % 2 ? 1.6 : -1.6), by + (i < 2 ? -1.6 : 1.6), 0.9, 0, 7);
+            g2.fill();
+          }
+        } else if (hv < 0.12) {
+          g2.fillStyle = 'rgba(255,240,210,0.12)';
+          g2.fillRect(px + 6 + hv * 60, py + 10, 12, 9);
         }
       }
+      // Kanten
       const dark = wood ? th.woodDark : th.groundDark;
       g2.fillStyle = dark;
-      if (!lf) g2.fillRect(px, py, 3, T);
-      if (!rt) g2.fillRect(px + T - 3, py, 3, T);
-      if (!dn) g2.fillRect(px, py + T - 3, T, 3);
-      const sc = 'rgba(255,240,210,0.55)';
-      if (!lf) stitch(g2, px + 7, py + (up ? 0 : 14), px + 7, py + T - (dn ? 0 : 7), sc);
-      if (!rt) stitch(g2, px + T - 7, py + (up ? 0 : 14), px + T - 7, py + T - (dn ? 0 : 7), sc);
-      if (!dn) stitch(g2, px + (lf ? 0 : 7), py + T - 7, px + T - (rt ? 0 : 7), py + T - 7, sc);
+      if (!lf) g2.fillRect(px, py, 4, T);
+      if (!rt) g2.fillRect(px + T - 4, py, 4, T);
+      if (!dn) g2.fillRect(px, py + T - 4, T, 4);
+      g2.fillStyle = 'rgba(255,255,255,0.13)';
+      if (!lf) g2.fillRect(px + 4, py, 2, T);
+      const sc = 'rgba(255,240,210,0.6)';
+      if (!lf) stitch(g2, px + 9, py + (up ? 0 : 16), px + 9, py + T - (dn ? 0 : 9), sc);
+      if (!rt) stitch(g2, px + T - 9, py + (up ? 0 : 16), px + T - 9, py + T - (dn ? 0 : 9), sc);
+      if (!dn) stitch(g2, px + (lf ? 0 : 9), py + T - 9, px + T - (rt ? 0 : 9), py + T - 9, sc);
       if (!up) {
         if (wood) {
           g2.fillStyle = dark;
-          g2.fillRect(px, py, T, 4);
+          g2.fillRect(px, py, T, 5);
+          g2.fillStyle = 'rgba(255,255,255,0.18)';
+          g2.fillRect(px, py + 5, T, 2);
         } else {
-          g2.fillStyle = th.top;
-          g2.fillRect(px, py, T, 10);
+          // Filz-Grasdecke mit Zickzack-Kante (Zackenschere)
+          g2.fillStyle = 'rgba(0,0,0,0.18)';
           g2.beginPath();
-          for (let i = 0; i < 4; i++) {
-            g2.moveTo(px + 10 + i * 10, py + 10);
-            g2.arc(px + 5 + i * 10, py + 10, 5, 0, Math.PI);
-          }
+          g2.moveTo(px, py);
+          g2.lineTo(px + T, py);
+          for (let i = 8; i >= 0; i--) g2.lineTo(px + i * 5, py + (i % 2 ? 17 : 13));
+          g2.closePath();
           g2.fill();
+          g2.fillStyle = th.top;
+          g2.beginPath();
+          g2.moveTo(px, py - 2);
+          g2.lineTo(px + T, py - 2);
+          for (let i = 8; i >= 0; i--) g2.lineTo(px + i * 5, py + (i % 2 ? 14 : 10));
+          g2.closePath();
+          g2.fill();
+          g2.fillStyle = 'rgba(255,255,255,0.28)';
+          g2.fillRect(px, py - 2, T, 3);
           g2.fillStyle = th.topDark;
-          g2.fillRect(px, py, T, 2.5);
-          stitch(g2, px, py + 6, px + T, py + 6, 'rgba(255,255,255,0.75)', 1.4);
+          g2.fillRect(px, py + 7, T, 1.5);
+          stitch(g2, px, py + 4, px + T, py + 4, 'rgba(255,255,255,0.85)', 1.4);
+          // Deko oben drauf (nur innerhalb des Chunks sichtbar)
+          if (y % CH !== 0) {
+            const dv = hash(x * 3 + 1, y * 7 + z);
+            if (!th.snow && dv > 0.72) {
+              const fx = px + 8 + hash(x, y + 2) * 24;
+              const col = th.flowers[Math.floor(hash(x + 2, y) * th.flowers.length)];
+              g2.strokeStyle = th.topDark;
+              g2.lineWidth = 2;
+              g2.beginPath();
+              g2.moveTo(fx, py);
+              g2.quadraticCurveTo(fx + 2, py - 7, fx, py - 13);
+              g2.stroke();
+              g2.fillStyle = col;
+              for (let i = 0; i < 5; i++) {
+                const a = (i / 5) * Math.PI * 2;
+                g2.beginPath();
+                g2.arc(fx + Math.cos(a) * 3.6, py - 14 + Math.sin(a) * 3.6, 2.8, 0, 7);
+                g2.fill();
+              }
+              g2.fillStyle = '#ffcf3f';
+              g2.beginPath();
+              g2.arc(fx, py - 14, 2.2, 0, 7);
+              g2.fill();
+            } else if (dv > 0.35) {
+              g2.fillStyle = th.tuft;
+              const n = 2 + Math.floor(dv * 3);
+              for (let i = 0; i < n; i++) {
+                const tx = px + 4 + hash(x + i, y * 5) * 32;
+                const h = 5 + hash(x * 7 + i, y) * 6;
+                g2.beginPath();
+                if (th.snow) {
+                  g2.arc(tx, py, h * 0.6, Math.PI, 0);
+                } else {
+                  g2.moveTo(tx - 3, py + 1);
+                  g2.lineTo(tx, py - h);
+                  g2.lineTo(tx + 3, py + 1);
+                }
+                g2.fill();
+              }
+            }
+          }
         }
       }
     } else if (ch === '=') {
@@ -522,7 +666,11 @@
   const springAnim = {};
 
   function drawBubble(g2, cx, cy, r, t, gold) {
-    g2.fillStyle = gold ? 'rgba(255,215,90,0.45)' : 'rgba(150,225,255,0.5)';
+    g2.fillStyle = gold ? 'rgba(255,200,60,0.35)' : 'rgba(120,215,255,0.25)';
+    g2.beginPath();
+    g2.arc(cx, cy, r + 4, 0, Math.PI * 2);
+    g2.fill();
+    g2.fillStyle = gold ? 'rgba(255,215,90,0.6)' : 'rgba(150,225,255,0.7)';
     g2.beginPath();
     g2.arc(cx, cy, r, 0, Math.PI * 2);
     g2.fill();
@@ -899,6 +1047,11 @@
     g2.arc(0, -19, 15, 0, Math.PI * 2);
     g2.fillStyle = look.body;
     g2.fill();
+    g2.lineWidth = 3;
+    g2.strokeStyle = shade(look.body, -0.5);
+    g2.stroke();
+    g2.beginPath();
+    g2.arc(0, -19, 14, 0, Math.PI * 2);
     g2.clip();
     g2.strokeStyle = bodyDark;
     g2.globalAlpha = 0.45;
@@ -962,6 +1115,9 @@
     g2.arc(0, -29, 11, Math.PI, 0);
     g2.closePath();
     g2.fill();
+    g2.lineWidth = 2;
+    g2.strokeStyle = shade(look.hat, -0.45);
+    g2.stroke();
     g2.fillStyle = shade(look.hat, -0.25);
     g2.beginPath();
     roundRect(g2, -12, -31, 24, 5, 2.5);
@@ -971,6 +1127,9 @@
     g2.beginPath();
     g2.arc(0, -41, 4.5, 0, Math.PI * 2);
     g2.fill();
+    g2.lineWidth = 1.5;
+    g2.strokeStyle = 'rgba(0,0,0,0.25)';
+    g2.stroke();
   }
   R.drawCharacter = drawCharacter;
 
@@ -1205,12 +1364,22 @@
     // statische Kacheln aus dem Cache
     const cx0 = Math.floor(v.x0 / CH), cx1 = Math.floor(v.x1 / CH);
     const cy0 = Math.floor(v.y0 / CH), cy1 = Math.floor(v.y1 / CH);
+    g2.globalAlpha = 0.28;
+    for (let cy = cy0; cy <= cy1; cy++) {
+      for (let cx = cx0; cx <= cx1; cx++) {
+        const sh = getShadow(L, z, cx, cy);
+        if (sh) g2.drawImage(sh, cx * CH * T + 7, cy * CH * T + 9, CH * T + 0.5, CH * T + 0.5);
+      }
+    }
+    g2.globalAlpha = 1;
+    if (z > 0 && 'filter' in g2) g2.filter = z === 1 ? 'brightness(0.86) saturate(0.95)' : 'brightness(0.72) saturate(0.85)';
     for (let cy = cy0; cy <= cy1; cy++) {
       for (let cx = cx0; cx <= cx1; cx++) {
         const c = getChunk(L, z, cx, cy);
         if (c) g2.drawImage(c, cx * CH * T, cy * CH * T, CH * T + 0.5, CH * T + 0.5);
       }
     }
+    if (z > 0 && 'filter' in g2) g2.filter = 'none';
     // Plattform-Schienen
     for (const p of W.plats) if (p.z === z) drawPlatTrack(g2, p.kind, p.x0, p.y0);
     // dynamische Kacheln
@@ -1284,7 +1453,22 @@
       }
     }
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    drawVignette();
   };
+
+  let vig = null, vigKey = '';
+  function drawVignette() {
+    const k = Wd + 'x' + Hd;
+    if (k !== vigKey) {
+      vigKey = k;
+      const r = Math.hypot(Wd, Hd) / 2;
+      vig = g.createRadialGradient(Wd / 2, Hd / 2, r * 0.55, Wd / 2, Hd / 2, r);
+      vig.addColorStop(0, 'rgba(20,10,0,0)');
+      vig.addColorStop(1, 'rgba(20,10,0,0.32)');
+    }
+    g.fillStyle = vig;
+    g.fillRect(0, 0, Wd, Hd);
+  }
 
   /* ------------------------------------------------------------------ */
   /* HUD                                                                 */
