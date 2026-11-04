@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#3b2a1e" />
+  <title>Fadenwelt</title>
+  <meta name="description" content="Fadenwelt – ein Bastel-Plattformer aus Pappe, Stoff und Knöpfen mit Level-Editor." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <canvas id="game" aria-label="Spielfläche"></canvas>
+
+  <div id="ui">
+    <!-- Hauptmenü -->
+    <section id="scr-title" class="screen">
+      <h1 class="logo">Fadenwelt</h1>
+      <p class="tagline">Ein Bastel-Abenteuer aus Pappe, Stoff und Knöpfen</p>
+      <canvas id="title-char" width="200" height="200"></canvas>
+      <nav class="menu">
+        <button class="btn big" data-act="story">▶&nbsp; Spielen</button>
+        <button class="btn big green" data-act="create">✂&nbsp; Erstellen</button>
+        <button class="btn big blue" data-act="mylevels">📁&nbsp; Meine Level</button>
+        <div class="row">
+          <button class="btn purple" data-act="costume">🧶 Kostüm</button>
+          <button class="btn grey" data-act="help">❓ Steuerung</button>
+        </div>
+      </nav>
+      <div class="sound-toggles">
+        <button class="chip" data-act="toggle-music" id="t-music">♪ Musik: an</button>
+        <button class="chip" data-act="toggle-sfx" id="t-sfx">🔊 Effekte: an</button>
+      </div>
+    </section>
+
+    <!-- Story-Level -->
+    <section id="scr-story" class="screen hidden">
+      <h2 class="title">Story-Level</h2>
+      <div id="story-list" class="cards"></div>
+      <button class="btn grey" data-act="back">← Zurück</button>
+    </section>
+
+    <!-- Eigene Level -->
+    <section id="scr-my" class="screen hidden">
+      <h2 class="title">Meine Level</h2>
+      <div id="my-list" class="cards"></div>
+      <div class="row">
+        <button class="btn green" data-act="create-new">＋ Neues Level</button>
+        <button class="btn blue" data-act="import">⇩ Importieren</button>
+        <button class="btn grey" data-act="back">← Zurück</button>
+      </div>
+    </section>
+
+    <!-- Kostüm -->
+    <section id="scr-costume" class="screen hidden">
+      <h2 class="title">Kostüm</h2>
+      <div class="card costume">
+        <canvas id="costume-char" width="220" height="220"></canvas>
+        <div class="swatches">
+          <label>Wolle</label>
+          <div class="sw" data-part="body"></div>
+          <label>Mütze</label>
+          <div class="sw" data-part="hat"></div>
+          <label>Knopfaugen</label>
+          <div class="sw" data-part="eye"></div>
+        </div>
+      </div>
+      <button class="btn grey" data-act="back">← Fertig</button>
+    </section>
+
+    <!-- Hilfe -->
+    <section id="scr-help" class="screen hidden">
+      <h2 class="title">Steuerung</h2>
+      <div class="card help">
+        <table>
+          <tr><th>Laufen</th><td><kbd>A</kbd>/<kbd>D</kbd> oder <kbd>←</kbd>/<kbd>→</kbd></td></tr>
+          <tr><th>Springen</th><td><kbd>Leertaste</kbd> (länger halten = höher)</td></tr>
+          <tr><th>Ebene nach hinten</th><td><kbd>W</kbd> oder <kbd>↑</kbd></td></tr>
+          <tr><th>Ebene nach vorne</th><td><kbd>S</kbd> oder <kbd>↓</kbd></td></tr>
+          <tr><th>Greifen &amp; Ziehen</th><td><kbd>Shift</kbd> oder <kbd>E</kbd> halten</td></tr>
+          <tr><th>Pause</th><td><kbd>Esc</kbd> oder <kbd>P</kbd></td></tr>
+          <tr><th>Gamepad</th><td>Stick/Steuerkreuz, Ⓐ springen, Ⓧ/R greifen, ↑/↓ Ebene, Start Pause</td></tr>
+        </table>
+        <p>Sammle <b>Punkteperlen</b> schnell hintereinander für einen Multiplikator bis ×5. <b>Preisblasen</b> sind gut versteckt – oft in einer anderen Ebene! Mit den <b>Checkpoints</b> geht es nach einem Missgeschick dort weiter.</p>
+        <p><b>Editor:</b> Linksklick malt, Rechtsklick radiert, Mausrad/Pfeiltasten verschieben, <kbd>Strg</kbd>+Mausrad zoomt, <kbd>1</kbd>–<kbd>3</kbd> wählt die Ebene, <kbd>Strg</kbd>+<kbd>Z</kbd> macht rückgängig. Auf Touch-Geräten verschiebst du mit zwei Fingern.</p>
+      </div>
+      <button class="btn grey" data-act="back">← Zurück</button>
+    </section>
+
+    <!-- Im Spiel -->
+    <button id="btn-pause" class="hud-btn hidden" aria-label="Pause">❚❚</button>
+    <div id="touch" class="hidden">
+      <div class="tpad left">
+        <button class="tbtn" data-k="left" aria-label="Links">◀</button>
+        <button class="tbtn" data-k="right" aria-label="Rechts">▶</button>
+      </div>
+      <div class="tpad layer">
+        <button class="tbtn small" data-k="up" aria-label="Ebene nach hinten">⤒</button>
+        <button class="tbtn small" data-k="down" aria-label="Ebene nach vorne">⤓</button>
+      </div>
+      <div class="tpad right">
+        <button class="tbtn grab" data-k="grab" aria-label="Greifen">✊</button>
+        <button class="tbtn jump" data-k="jump" aria-label="Springen">⤊</button>
+      </div>
+    </div>
+
+    <!-- Editor -->
+    <div id="ed-top" class="hidden">
+      <button class="btn small grey" data-ed="menu" title="Zum Hauptmenü">☰</button>
+      <button class="ed-name" data-ed="rename" id="ed-name" title="Umbenennen">Mein Level</button>
+      <button class="btn small grey" data-ed="undo" title="Rückgängig (Strg+Z)">↶</button>
+      <button class="btn small grey" data-ed="redo" title="Wiederholen (Strg+Y)">↷</button>
+      <button class="btn small green" data-ed="test" title="Level testen">▶ Testen</button>
+      <button class="btn small blue" data-ed="save" title="Speichern">💾</button>
+      <button class="btn small purple" data-ed="more" title="Einstellungen">⚙</button>
+    </div>
+    <div id="ed-layers" class="hidden">
+      <button data-layer="2">Hinten</button>
+      <button data-layer="1">Mitte</button>
+      <button data-layer="0" class="on">Vorne</button>
+    </div>
+    <div id="ed-palette" class="hidden"></div>
+    <div id="ed-tip" class="hidden"></div>
+
+    <!-- Modals -->
+    <div id="modal" class="modal hidden" role="dialog" aria-modal="true">
+      <div class="card dialog">
+        <h3 id="m-title"></h3>
+        <div id="m-body"></div>
+        <div id="m-buttons" class="buttons"></div>
+      </div>
+    </div>
+  </div>
+
+  <noscript><p style="color:#fff;padding:20px">Fadenwelt braucht JavaScript.</p></noscript>
+  <script src="js/engine.js"></script>
+  <script src="js/levels.js"></script>
+  <script src="js/render.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/editor.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
