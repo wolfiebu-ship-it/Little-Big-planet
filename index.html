@@ -74,9 +74,27 @@
 
     <!-- Story-Level -->
     <section id="scr-story" class="screen hidden">
-      <h2 class="title">Story-Level</h2>
+      <h2 class="title" id="story-title">Story-Level</h2>
+      <div id="world" class="world hidden">
+        <p class="w-hint">Planet drehen: wischen · Level wählen: Fähnchen antippen</p>
+        <div class="card world-card">
+          <button class="btn grey w-arrow" id="w-prev" aria-label="Vorheriges Level">◀</button>
+          <div class="w-info">
+            <div class="num" id="w-num"></div>
+            <h3 id="w-name"></h3>
+            <p id="w-blurb"></p>
+            <div id="w-stars"></div>
+            <div class="stats" id="w-stats"></div>
+          </div>
+          <button class="btn grey w-arrow" id="w-next" aria-label="Nächstes Level">▶</button>
+        </div>
+        <div class="row">
+          <button class="btn big green" id="w-play">▶ Spielen</button>
+          <button class="btn grey" data-act="back">← Zurück</button>
+        </div>
+      </div>
       <div id="story-list" class="cards"></div>
-      <button class="btn grey" data-act="back">← Zurück</button>
+      <button class="btn grey" data-act="back" id="story-back">← Zurück</button>
     </section>
 
     <!-- Eigene Level -->

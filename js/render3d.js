@@ -996,8 +996,8 @@
 
   function poseDoll(d, o, dt) {
     const run = o.run || 0, ph = o.phase || 0;
-    const sw = Math.sin(ph) * 0.75 * run;
-    let lL = sw, lR = -sw, aL = -sw * 0.8, aR = sw * 0.8, aZ = 0.35;
+    const sw = Math.sin(ph) * 0.95 * run;
+    let lL = sw, lR = -sw, aL = -sw * 1.15, aR = sw * 1.15, aZ = 0.3 + run * 0.12;
     if (o.air) {
       lL = 0.5;
       lR = -0.3;
@@ -1017,8 +1017,11 @@
     if (o.wave) zr = 2.4 + Math.sin(o.wave * 10) * 0.4;
     d.armL.rotation.z += (zl - d.armL.rotation.z) * k;
     d.armR.rotation.z += (zr - d.armR.rotation.z) * k;
-    const bob = run > 0.1 ? Math.abs(Math.sin(ph)) * 0.04 * run : Math.sin((o.t || 0) * 2.2) * 0.012;
+    const bob = run > 0.1 ? Math.abs(Math.sin(ph)) * 0.07 * run : Math.sin((o.t || 0) * 2.2) * 0.012;
     d.body.position.y = bob;
+    const lean = o.air ? 0.05 : run * 0.24;
+    d.body.rotation.x += (lean - d.body.rotation.x) * k;
+    d.head.rotation.x = -lean * 0.5 + (run > 0.1 ? Math.sin(ph * 2) * 0.04 * run : 0);
     d.head.rotation.z = Math.sin((o.t || 0) * 1.3) * 0.05;
     for (const e of d.eyes) e.scale.y = o.blink ? 0.15 : 1;
   }
@@ -1310,7 +1313,15 @@
     anim.squash += (0 - anim.squash) * Math.min(1, dt * 12);
     if (W) {
       const P = W.player;
-      if (P.grounded) anim.phase += (Math.abs(P.vx) / 32) * dt;
+      if (P.grounded) {
+        const before = Math.sin(anim.phase);
+        anim.phase += (Math.abs(P.vx) / 30) * dt;
+        const after = Math.sin(anim.phase);
+        if (before * after < 0 && Math.abs(P.vx) > 140 && P.dead <= 0) {
+          burst((P.x + P.w / 2) / T - P.facing * 0.15, -(P.y + P.h) / T + 0.03, LZ(P.z), 3, { color: '#ffffff', speed: 0.9, life: 0.3, size: 0.11, up: 0.6 });
+          if (FW.Audio && FW.Audio.play) FW.Audio.play('step');
+        }
+      }
       anim.nextBlink -= dt;
       if (anim.nextBlink <= 0) {
         anim.blink = 0.12;
@@ -1492,7 +1503,7 @@
     if (P.dead <= 0) {
       const run = P.grounded ? Math.min(1, Math.abs(P.vx) / C.RUN) : 0;
       const target = Math.abs(P.vx) > 20 || P.grab ? P.facing * 1.05 : P.facing * 0.45;
-      anim.turn += (target - anim.turn) * Math.min(1, dt * 10);
+      anim.turn += (target - anim.turn) * Math.min(1, dt * 16);
       doll.group.position.set((P.x + P.w / 2) / T, -(P.y + P.h) / T, LZ(P.zf));
       doll.group.rotation.y = anim.turn;
       let sx = 1, sy = 1;
@@ -1574,5 +1585,287 @@
         r.render(sc, cm);
       }
     };
+  };
+  /* ------------------------------------------------------------------ */
+  /* Weltkarte: genähter Stoff-Saturn mit Ring und Level-Stecknadeln      */
+  /* ------------------------------------------------------------------ */
+  let hub = null;
+
+  function texPlanet() {
+    return canvasTex('planet', 1024, 512, (g, w, h) => {
+      g.fillStyle = '#e8a35a';
+      g.fillRect(0, 0, w, h);
+      // Stoffbänder wie bei einem Gasriesen, aber genäht
+      const bands = [
+        [0, 60, '#f2c48a'], [60, 110, '#d98a4a'], [170, 70, '#f5d6a0'], [240, 50, '#c97a3c'],
+        [290, 90, '#efb873'], [380, 60, '#d9894b'], [440, 72, '#f2c48a']
+      ];
+      for (const [y, hh, c] of bands) {
+        g.fillStyle = c;
+        g.fillRect(0, y, w, hh);
+        g.save();
+        g.strokeStyle = 'rgba(255,255,255,0.75)';
+        g.lineWidth = 3;
+        g.setLineDash([12, 9]);
+        g.beginPath();
+        g.moveTo(0, y + 6);
+        g.lineTo(w, y + 6);
+        g.stroke();
+        g.restore();
+      }
+      // Flicken, Knöpfe und Strickstrukturen
+      const cols = ['#2a9d8f', '#8e5fc4', '#3d8ed9', '#e76f51', '#7cb342', '#f4d35e'];
+      for (let i = 0; i < 26; i++) {
+        const x = hash(i, 1) * w, y = 40 + hash(i, 2) * (h - 80);
+        const pw = 50 + hash(i, 3) * 70, ph = 34 + hash(i, 4) * 40;
+        g.save();
+        g.translate(x, y);
+        g.rotate((hash(i, 5) - 0.5) * 0.6);
+        g.fillStyle = 'rgba(0,0,0,0.18)';
+        g.fillRect(-pw / 2 + 4, -ph / 2 + 5, pw, ph);
+        g.fillStyle = cols[i % cols.length];
+        g.fillRect(-pw / 2, -ph / 2, pw, ph);
+        g.strokeStyle = 'rgba(255,255,255,0.85)';
+        g.lineWidth = 2.5;
+        g.setLineDash([7, 6]);
+        g.strokeRect(-pw / 2 + 6, -ph / 2 + 6, pw - 12, ph - 12);
+        g.restore();
+      }
+      for (let i = 0; i < 18; i++) {
+        const x = hash(i, 11) * w, y = 30 + hash(i, 12) * (h - 60), r = 10 + hash(i, 13) * 8;
+        g.fillStyle = 'rgba(0,0,0,0.25)';
+        g.beginPath();
+        g.arc(x + 2, y + 3, r, 0, 7);
+        g.fill();
+        g.fillStyle = cols[(i + 2) % cols.length];
+        g.beginPath();
+        g.arc(x, y, r, 0, 7);
+        g.fill();
+        g.fillStyle = 'rgba(0,0,0,0.45)';
+        for (let k = 0; k < 4; k++) {
+          g.beginPath();
+          g.arc(x + (k % 2 ? r * 0.25 : -r * 0.25), y + (k < 2 ? -r * 0.25 : r * 0.25), r * 0.12, 0, 7);
+          g.fill();
+        }
+      }
+      for (let i = 0; i < 4000; i++) {
+        g.fillStyle = Math.random() < 0.5 ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.06)';
+        g.fillRect(Math.random() * w, Math.random() * h, 3, 2);
+      }
+    });
+  }
+  function texRing() {
+    return canvasTex('ring', 512, 512, (g, w, h) => {
+      g.clearRect(0, 0, w, h);
+      const cx = w / 2, cy = h / 2;
+      const rings = [[256, '#f6e2b8'], [238, '#d9a066'], [214, '#f2cf8f'], [196, '#b98250'], [176, '#f6e2b8']];
+      for (const [r, c] of rings) {
+        g.fillStyle = c;
+        g.beginPath();
+        g.arc(cx, cy, r, 0, Math.PI * 2);
+        g.fill();
+      }
+      g.globalCompositeOperation = 'destination-out';
+      g.beginPath();
+      g.arc(cx, cy, 158, 0, Math.PI * 2);
+      g.fill();
+      g.globalCompositeOperation = 'source-over';
+      g.strokeStyle = 'rgba(255,255,255,0.8)';
+      g.lineWidth = 3;
+      g.setLineDash([10, 8]);
+      for (const r of [247, 205, 166]) {
+        g.beginPath();
+        g.arc(cx, cy, r, 0, Math.PI * 2);
+        g.stroke();
+      }
+    });
+  }
+  function texNumber(n, col) {
+    return canvasTex('num' + n + col, 128, 128, (g) => {
+      g.fillStyle = 'rgba(0,0,0,0.25)';
+      g.beginPath();
+      g.arc(66, 68, 54, 0, 7);
+      g.fill();
+      g.fillStyle = col;
+      g.beginPath();
+      g.arc(64, 64, 54, 0, 7);
+      g.fill();
+      g.strokeStyle = '#ffffff';
+      g.lineWidth = 5;
+      g.setLineDash([10, 8]);
+      g.beginPath();
+      g.arc(64, 64, 44, 0, 7);
+      g.stroke();
+      g.fillStyle = '#ffffff';
+      g.font = 'bold 68px Fredoka, ui-rounded, sans-serif';
+      g.textAlign = 'center';
+      g.textBaseline = 'middle';
+      g.fillText(String(n), 64, 68);
+    });
+  }
+
+  const PIN_COLS = ['#5fb83d', '#8e5fc4', '#3d8ed9', '#e63946', '#f2c14e', '#2a9d8f'];
+  // Lage der Level auf dem Planeten: [Längengrad, Breitengrad] in Grad
+  const PIN_POS = [[0, 18], [72, -12], [150, 22], [222, -20], [290, 10], [330, -28]];
+
+  function buildHub(count) {
+    shared();
+    const sc = new THREE.Scene();
+    sc.background = canvasTex('space', 4, 256, (g, w, h) => {
+      const grd = g.createLinearGradient(0, 0, 0, h);
+      grd.addColorStop(0, '#0b1030');
+      grd.addColorStop(1, '#2a1a4a');
+      g.fillStyle = grd;
+      g.fillRect(0, 0, w, h);
+    });
+    sc.add(new THREE.HemisphereLight(0xdfe9ff, 0x3a2a5a, 0.75));
+    const dl = new THREE.DirectionalLight(0xfff0d8, 1.1);
+    dl.position.set(-6, 5, 8);
+    sc.add(dl);
+    // Sterne
+    const sg = new THREE.BufferGeometry();
+    const pos = [];
+    for (let i = 0; i < 900; i++) {
+      const v = new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize().multiplyScalar(60 + Math.random() * 30);
+      pos.push(v.x, v.y, v.z);
+    }
+    sg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    const stars = new THREE.Points(sg, new THREE.PointsMaterial({ color: 0xffffff, size: 0.35, map: G.circle, transparent: true, depthWrite: false }));
+    sc.add(stars);
+    // Planet
+    const tilt = new THREE.Group();
+    tilt.rotation.z = 0.22;
+    tilt.rotation.x = 0.18;
+    sc.add(tilt);
+    const spin = new THREE.Group();
+    tilt.add(spin);
+    const R = 3;
+    const planet = new THREE.Mesh(new THREE.SphereGeometry(R, 64, 40), std({ map: texPlanet(), roughness: 1 }));
+    spin.add(planet);
+    // Ring
+    const ring = new THREE.Mesh(new THREE.RingGeometry(R * 1.35, R * 2.15, 96, 1), std({ map: texRing(), transparent: true, side: THREE.DoubleSide, roughness: 1, depthWrite: false }));
+    ring.rotation.x = -Math.PI / 2 + 0.12;
+    // planare UV des Rings auf die quadratische Textur abbilden
+    const uv = ring.geometry.attributes.uv, p = ring.geometry.attributes.position;
+    for (let i = 0; i < uv.count; i++) {
+      uv.setXY(i, p.getX(i) / (R * 4.3) + 0.5, p.getY(i) / (R * 4.3) + 0.5);
+    }
+    uv.needsUpdate = true;
+    tilt.add(ring);
+    // kleiner Stoffmond
+    const moon = new THREE.Mesh(new THREE.SphereGeometry(0.45, 24, 16), std({ map: texKnit(), color: 0xbfc8e8, roughness: 1 }));
+    sc.add(moon);
+    // Stecknadeln
+    const pins = [];
+    for (let i = 0; i < count; i++) {
+      const [lon, lat] = PIN_POS[i % PIN_POS.length];
+      const la = (lat * Math.PI) / 180, lo = (lon * Math.PI) / 180;
+      const n = new THREE.Vector3(Math.cos(la) * Math.sin(lo), Math.sin(la), Math.cos(la) * Math.cos(lo));
+      const pin = new THREE.Group();
+      const col = PIN_COLS[i % PIN_COLS.length];
+      const stem = mesh(G.cyl, std({ color: 0xd9d9d9, metalness: 0.6, roughness: 0.3 }));
+      stem.scale.set(0.035, 0.7, 0.035);
+      stem.position.y = 0.35;
+      const head = mesh(G.sphere, std({ color: new THREE.Color(col), roughness: 0.4 }));
+      head.scale.setScalar(0.2);
+      head.position.y = 0.75;
+      const flag = mesh(new THREE.PlaneGeometry(0.42, 0.28), std({ color: new THREE.Color(col), side: THREE.DoubleSide }));
+      flag.position.set(0.22, 0.55, 0);
+      pin.add(stem, head, flag);
+      const label = new THREE.Sprite(new THREE.SpriteMaterial({ map: texNumber(i + 1, col), depthTest: false }));
+      label.scale.set(0.55, 0.55, 1);
+      label.position.y = 1.2;
+      label.renderOrder = 5;
+      pin.add(label);
+      pin.position.copy(n.clone().multiplyScalar(R * 0.98));
+      pin.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), n);
+      spin.add(pin);
+      pins.push({ group: pin, head, label, lon });
+    }
+    const cm = new THREE.PerspectiveCamera(34, 1, 0.1, 300);
+    return { scene: sc, camera: cm, spin, pins, moon, stars, rot: 0, target: 0, sel: 0, drag: null, vel: 0 };
+  }
+
+  R3.hubShow = function (count) {
+    if (!renderer) return false;
+    if (!hub || hub.pins.length !== count) hub = buildHub(count);
+    return true;
+  };
+  R3.hubSelect = function (i) {
+    if (!hub) return;
+    hub.sel = i;
+    // Planet so drehen, dass die Nadel nach vorne zeigt (kürzester Weg)
+    const want = (-hub.pins[i].lon * Math.PI) / 180;
+    let d = want - hub.target;
+    d = Math.atan2(Math.sin(d), Math.cos(d));
+    hub.target += d;
+  };
+  R3.hubDragStart = function (x) {
+    if (hub) hub.drag = { x, rot: hub.target, moved: 0 };
+  };
+  R3.hubDragMove = function (x) {
+    if (!hub || !hub.drag) return;
+    const dx = x - hub.drag.x;
+    hub.drag.moved = Math.max(hub.drag.moved, Math.abs(dx));
+    hub.target = hub.drag.rot + dx * 0.008;
+  };
+  // Gibt den Index der angetippten Nadel zurück oder -1; beendet das Ziehen
+  R3.hubDragEnd = function (x, y) {
+    if (!hub || !hub.drag) return -1;
+    const moved = hub.drag.moved;
+    hub.drag = null;
+    if (moved > 8) {
+      // nächste Nadel einrasten lassen
+      let best = 0, bd = Infinity;
+      hub.pins.forEach((p, i) => {
+        const want = (-p.lon * Math.PI) / 180;
+        const d = Math.abs(Math.atan2(Math.sin(want - hub.target), Math.cos(want - hub.target)));
+        if (d < bd) {
+          bd = d;
+          best = i;
+        }
+      });
+      R3.hubSelect(best);
+      return -2 - best;
+    }
+    const ray = new THREE.Raycaster();
+    const v = new THREE.Vector2((x / window.innerWidth) * 2 - 1, -(y / window.innerHeight) * 2 + 1);
+    ray.setFromCamera(v, hub.camera);
+    const objs = [];
+    hub.pins.forEach((p, i) => p.group.traverse((o) => {
+      if (o.isMesh || o.isSprite) {
+        o.userData.pin = i;
+        objs.push(o);
+      }
+    }));
+    const hits = ray.intersectObjects(objs, false);
+    return hits.length ? hits[0].object.userData.pin : -1;
+  };
+  R3.hubRender = function (t, dt) {
+    if (!hub || !renderer) return;
+    const aspect = window.innerWidth / Math.max(1, window.innerHeight);
+    hub.camera.aspect = aspect;
+    // Planet etwas nach oben, damit unten Platz für die Level-Karte bleibt
+    const dist = aspect < 1 ? 24 : 18.5;
+    hub.camera.position.set(0, -1.4, dist);
+    hub.camera.lookAt(0, -1.6, 0);
+    hub.camera.updateProjectionMatrix();
+    hub.rot += (hub.target - hub.rot) * Math.min(1, dt * 5);
+    hub.spin.rotation.y = hub.rot;
+    hub.stars.rotation.y = t * 0.01;
+    hub.moon.position.set(Math.cos(t * 0.25) * 6.2, 1.6 + Math.sin(t * 0.25) * 0.8, Math.sin(t * 0.25) * 6.2);
+    hub.moon.rotation.y = t * 0.4;
+    const wp = new THREE.Vector3(), toCam = new THREE.Vector3();
+    hub.pins.forEach((p, i) => {
+      const on = i === hub.sel;
+      const s = on ? 1.35 + Math.sin(t * 5) * 0.08 : 1;
+      p.group.scale.setScalar(s);
+      // Nummer nur zeigen, wenn die Nadel zur Kamera zeigt
+      p.group.getWorldPosition(wp);
+      toCam.copy(hub.camera.position).sub(wp).normalize();
+      const facing = wp.normalize().dot(toCam);
+      p.label.visible = facing > 0.12;
+    });
+    renderer.render(hub.scene, hub.camera);
   };
 })(typeof window !== 'undefined' ? window : globalThis);

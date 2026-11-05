@@ -533,6 +533,7 @@
     for (const k in SCREENS) $(SCREENS[k]).classList.toggle('hidden', k !== name);
     G.screen = name;
     if (SCREENS[name]) {
+      A.setSong('menu');
       G.mode = 'menu';
       G.W = null;
       if (!G.demo) G.demo = FW.createWorld(FW.LEVELS[0].data);
@@ -557,7 +558,52 @@
     return s;
   }
 
+  function levelSong(data, meta) {
+    if (meta && meta.source === 'story' && meta.id) return meta.id;
+    return ['l1', 'l2', 'l3'][(data && data.theme) || 0] || 'l1';
+  }
+
+  function renderWorldCard() {
+    const i = G.hubSel || 0;
+    const lv = FW.LEVELS[i];
+    const pr = progress()[lv.id];
+    $('#w-num').textContent = 'Level ' + (i + 1) + ' von ' + FW.LEVELS.length;
+    $('#w-name').textContent = lv.data.name;
+    $('#w-blurb').textContent = lv.blurb;
+    const st = $('#w-stars');
+    st.innerHTML = '';
+    st.appendChild(starsEl(pr ? pr.stars : 0));
+    $('#w-stats').textContent = pr ? 'Rekord: ' + pr.best + ' Punkte · ' + R.fmtTime(pr.time || 0) : 'Noch nicht gespielt';
+  }
+  function selectWorld(i) {
+    const n = FW.LEVELS.length;
+    G.hubSel = ((i % n) + n) % n;
+    R3.hubSelect(G.hubSel);
+    renderWorldCard();
+  }
+  function playSelected() {
+    const i = G.hubSel || 0;
+    const lv = FW.LEVELS[i];
+    A.play('click');
+    G.playLevel(lv.data, { source: 'story', index: i, id: lv.id });
+  }
+
   function renderStory() {
+    const worldMode = use3D && R3.hubShow(FW.LEVELS.length);
+    $('#scr-story').classList.toggle('world-mode', !!worldMode);
+    $('#world').classList.toggle('hidden', !worldMode);
+    $('#story-list').classList.toggle('hidden', !!worldMode);
+    $('#story-back').classList.toggle('hidden', !!worldMode);
+    $('#story-title').textContent = worldMode ? 'Planet Saturn' : 'Story-Level';
+    if (worldMode) {
+      if (G.hubSel === undefined) {
+        const prog = progress();
+        const firstOpen = FW.LEVELS.findIndex((l) => !prog[l.id]);
+        G.hubSel = firstOpen < 0 ? 0 : firstOpen;
+      }
+      selectWorld(G.hubSel);
+      return;
+    }
     const list = $('#story-list');
     list.innerHTML = '';
     const prog = progress();
@@ -683,6 +729,8 @@
   G.playLevel = function (data, meta) {
     for (const k in SCREENS) $(SCREENS[k]).classList.add('hidden');
     G.play = { data, meta: meta || { source: 'story' } };
+    A.setSong(levelSong(data, G.play.meta));
+    if (G.play.meta.source === 'story') G.hubSel = G.play.meta.index;
     G.W = FW.createWorld(data);
     R.setLevel(G.W.L);
     R.clearFx();
@@ -960,7 +1008,11 @@
         const span = Math.max(0, D.L.w * C.T - 2 * hw);
         R.cam.x = hw + span * (0.5 - 0.5 * Math.cos(t * 0.03));
         R.cam.y = D.L.h * C.T - sz.h / 2 / R.cam.zoom + 10;
-        if (use3D) {
+        if (use3D && G.screen === 'story' && !$('#world').classList.contains('hidden')) {
+          canvas3d.classList.toggle('hidden', false);
+          R3.hubRender(t, dt);
+          R.clearOverlay();
+        } else if (use3D) {
           canvas3d.classList.toggle('hidden', false);
           R3.update(dt, D);
           const span = Math.max(0, D.L.w - 14);
@@ -981,6 +1033,44 @@
       }
     }
   }
+
+  // Planet: wischen zum Drehen, Fähnchen antippen zum Auswählen
+  let hubDown = false;
+  canvas.addEventListener('pointerdown', (e) => {
+    if (G.mode !== 'menu' || G.screen !== 'story' || !use3D || G.modalOpen()) return;
+    hubDown = true;
+    A.init();
+    R3.hubDragStart(e.clientX);
+  });
+  canvas.addEventListener('pointermove', (e) => {
+    if (hubDown) R3.hubDragMove(e.clientX);
+  });
+  const hubUp = (e) => {
+    if (!hubDown) return;
+    hubDown = false;
+    const r = R3.hubDragEnd(e.clientX, e.clientY);
+    if (r >= 0) {
+      if (r === G.hubSel) playSelected();
+      else {
+        selectWorld(r);
+        A.play('click');
+      }
+    } else if (r <= -2) {
+      G.hubSel = -2 - r;
+      renderWorldCard();
+    }
+  };
+  canvas.addEventListener('pointerup', hubUp);
+  canvas.addEventListener('pointercancel', hubUp);
+  $('#w-prev').addEventListener('click', () => {
+    A.play('click');
+    selectWorld((G.hubSel || 0) - 1);
+  });
+  $('#w-next').addEventListener('click', () => {
+    A.play('click');
+    selectWorld((G.hubSel || 0) + 1);
+  });
+  $('#w-play').addEventListener('click', playSelected);
 
   showScreen('title');
   requestAnimationFrame(frame);

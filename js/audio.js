@@ -105,6 +105,9 @@
       case 'land':
         noise(0.08, 0.12, 600);
         break;
+      case 'step':
+        noise(0.035, 0.05, 420);
+        break;
       case 'die':
         tone(500, 0.45, 'sawtooth', 0.12, t, 80);
         noise(0.3, 0.2, 900);
@@ -164,7 +167,8 @@
   const ONSET = {
     b: { f: [240, 0.82, 0.9], glide: 0.045 },
     bl: { f: [330, 1150, 2650], abs: true, glide: 0.085 },
-    br: { f: [360, 1100, 1550], abs: true, glide: 0.095 }
+    br: { f: [360, 1100, 1550], abs: true, glide: 0.095 },
+    d: { f: [290, 1700, 2650], abs: true, glide: 0.035 }
   };
   const VOICE = {
     m: { scale: 1, gain: 1, vib: 5.2 },
@@ -201,7 +205,7 @@
   // Ein gesungener Laut wie „blam“, „brum“, „bim“ oder „uu“
   function sing(B, t, midi, dur, syl, voiceType, vol) {
     const ac = B.ac;
-    const m = /^(bl|br|b)?([aeiou])(m)?$/.exec(syl) || [null, null, 'u', null];
+    const m = /^(bl|br|b|d)?([aeiou])(m)?$/.exec(syl) || [null, null, 'u', null];
     const onset = m[1] ? ONSET[m[1]] : null, vowel = VOWELS[m[2]], coda = m[3];
     const V = VOICE[voiceType];
     const f0 = hz(midi) * Math.pow(2, ((Math.random() - 0.5) * 14) / 1200);
@@ -285,7 +289,7 @@
       const p = noiseSrc(ac, t, 0.03);
       const pf = ac.createBiquadFilter();
       pf.type = 'lowpass';
-      pf.frequency.value = 700;
+      pf.frequency.value = m[1] === 'd' ? 2600 : 700;
       const pg = ac.createGain();
       pg.gain.setValueAtTime(v * 0.7, t);
       pg.gain.exponentialRampToValueAtTime(0.0001, t + 0.025);
@@ -354,58 +358,129 @@
     }
   }
 
-  // Eigene Komposition, 104 BPM, Achtel mit leichtem Swing.
-  // Akkorde: C – Am – F – G. Jede Zeile = ein Takt mit 8 Achteln.
-  const BPM = 104;
-  const STEP = 60 / BPM / 2;
-  const CHORDS = [[48, 64, 67], [45, 64, 69], [41, 65, 69], [43, 62, 67]];
-  const LEAD = [
-    [[72, 'bam', 2], null, [76, 'blim', 1], [74, 'blam', 2], null, [72, 'bum', 1], [67, 'bram', 2], null],
-    [[69, 'blum', 2], null, [72, 'blam', 1], [76, 'blim', 1], [74, 'blam', 2], null, [72, 'bum', 2], null],
-    [[69, 'bram', 1], [72, 'brum', 1], [74, 'brum', 1], [72, 'brum', 2], null, [69, 'blam', 1], [67, 'blum', 2], null],
-    [[71, 'blam', 2], null, [74, 'blam', 1], [71, 'blum', 1], [67, 'bam', 2], null, [67, 'bum', 2], null]
-  ];
-  // Antwort der Männerstimme in jedem zweiten Durchgang
-  const ANSWER = [
-    [null, null, null, null, [60, 'bram', 1], [64, 'brum', 1], [62, 'brum', 1], [60, 'brum', 1]],
-    [null, null, null, null, [57, 'blam', 1], [60, 'blum', 1], [57, 'blam', 1], [55, 'blam', 1]],
-    [null, null, null, null, [57, 'bram', 1], [60, 'brum', 1], [62, 'brum', 1], [60, 'brum', 1]],
-    [null, null, null, null, [59, 'blam', 1], [62, 'blum', 1], [55, 'bam', 1], [55, 'bum', 1]]
-  ];
-  const BASS = [[0, 'bum', 2], [3, 'bom', 1], [4, 'bum', 2], [6, 'bam', 1], [7, 'bom', 1]];
+  // Eigene Kompositionen. Jede Zeile = ein Takt mit 8 Achteln: [MIDI-Ton, Silbe, Länge in Achteln].
+  // Bass: [Achtel, Silbe, Länge, Halbtöne über dem Grundton].
+  const SONGS = {
+    menu: {
+      name: 'Sternenstaub', bpm: 84, swing: 0.06,
+      chords: [[48, 64, 67], [41, 65, 69], [45, 64, 69], [43, 62, 67]],
+      lead: [
+        [[72, 'u', 4], null, null, null, [71, 'blim', 2], null, [67, 'bum', 2], null],
+        [[69, 'o', 4], null, null, null, [72, 'blam', 2], null, [69, 'bum', 2], null],
+        [[65, 'u', 4], null, null, null, [69, 'blim', 2], null, [72, 'bum', 2], null],
+        [[71, 'o', 4], null, null, null, [74, 'blam', 2], null, [71, 'bum', 2], null]
+      ],
+      answer: null,
+      bass: [[0, 'bum', 3, 0], [4, 'bom', 3, 7]],
+      kick: [0], snare: [4], hats: 'quarter', choirFrom: 0, leadVol: 0.5
+    },
+    l1: {
+      name: 'Pappwiesen-Hüpfer', bpm: 104, swing: 0.12,
+      chords: [[48, 64, 67], [45, 64, 69], [41, 65, 69], [43, 62, 67]],
+      lead: [
+        [[72, 'bam', 2], null, [76, 'blim', 1], [74, 'blam', 2], null, [72, 'bum', 1], [67, 'bram', 2], null],
+        [[69, 'blum', 2], null, [72, 'blam', 1], [76, 'blim', 1], [74, 'blam', 2], null, [72, 'bum', 2], null],
+        [[69, 'bram', 1], [72, 'brum', 1], [74, 'brum', 1], [72, 'brum', 2], null, [69, 'blam', 1], [67, 'blum', 2], null],
+        [[71, 'blam', 2], null, [74, 'blam', 1], [71, 'blum', 1], [67, 'bam', 2], null, [67, 'bum', 2], null]
+      ],
+      answer: [
+        [null, null, null, null, [60, 'bram', 1], [64, 'brum', 1], [62, 'brum', 1], [60, 'brum', 1]],
+        [null, null, null, null, [57, 'blam', 1], [60, 'blum', 1], [57, 'blam', 1], [55, 'blam', 1]],
+        [null, null, null, null, [57, 'bram', 1], [60, 'brum', 1], [62, 'brum', 1], [60, 'brum', 1]],
+        [null, null, null, null, [59, 'blam', 1], [62, 'blum', 1], [55, 'bam', 1], [55, 'bum', 1]]
+      ],
+      bass: [[0, 'bum', 2, 0], [3, 'bom', 1, 7], [4, 'bum', 2, 0], [6, 'bam', 1, 12], [7, 'bom', 1, 7]],
+      kick: [0, 5], snare: [2, 6], hats: 'eighth', choirFrom: 1, leadVol: 0.62
+    },
+    l2: {
+      name: 'Garnfabrik-Groove', bpm: 116, swing: 0,
+      chords: [[45, 60, 64], [41, 60, 65], [48, 64, 67], [40, 59, 68]],
+      lead: [
+        [[69, 'dam', 1], [69, 'dam', 1], null, [72, 'dim', 1], null, [71, 'dum', 1], [69, 'dam', 2], null],
+        [[65, 'dam', 1], [65, 'dam', 1], null, [69, 'dim', 1], null, [67, 'dum', 1], [65, 'dam', 2], null],
+        [[67, 'bram', 1], [72, 'brum', 1], null, [71, 'bram', 1], [72, 'brum', 1], null, [76, 'dim', 2], null],
+        [[68, 'dam', 2], null, [71, 'dim', 1], [74, 'dum', 2], null, [71, 'dam', 1], [68, 'dum', 1]]
+      ],
+      answer: [
+        [null, null, null, null, [57, 'dum', 1], null, [57, 'dum', 1], [60, 'dam', 1]],
+        [null, null, null, null, [53, 'dum', 1], null, [53, 'dum', 1], [57, 'dam', 1]],
+        [null, null, null, null, [55, 'dum', 1], null, [60, 'dum', 1], [64, 'dam', 1]],
+        [null, null, null, null, [52, 'dum', 1], [56, 'dum', 1], [59, 'dam', 1], [56, 'dum', 1]]
+      ],
+      bass: [[0, 'dum', 1, 0], [2, 'dum', 1, 0], [3, 'dom', 1, 12], [4, 'dum', 1, 0], [6, 'dum', 1, 7], [7, 'dom', 1, 12]],
+      kick: [0, 3, 4], snare: [2, 6], hats: 'eighth', choirFrom: 2, leadVol: 0.58
+    },
+    l3: {
+      name: 'Gipfelwind', bpm: 92, swing: 0.1,
+      chords: [[41, 65, 69], [48, 64, 67], [50, 65, 69], [46, 65, 70]],
+      lead: [
+        [[72, 'bla', 3], null, null, [69, 'blim', 1], [72, 'blam', 2], null, [77, 'a', 2], null],
+        [[76, 'blo', 3], null, null, [72, 'bim', 1], [67, 'bam', 4], null, null, null],
+        [[74, 'bra', 3], null, null, [77, 'brim', 1], [74, 'blam', 2], null, [72, 'bum', 2], null],
+        [[70, 'blo', 2], null, [74, 'blim', 2], null, [72, 'bla', 4], null, null, null]
+      ],
+      answer: [
+        [null, null, null, null, null, null, [60, 'bum', 1], [64, 'bum', 1]],
+        [null, null, null, null, null, null, [55, 'bum', 1], [60, 'bum', 1]],
+        [null, null, null, null, null, null, [57, 'bum', 1], [62, 'bum', 1]],
+        [null, null, null, null, null, null, [58, 'bum', 1], [62, 'bom', 1]]
+      ],
+      bass: [[0, 'bom', 4, 0], [4, 'bum', 2, 7], [6, 'bum', 2, 12]],
+      kick: [0], snare: [4], hats: 'quarter', choirFrom: 0, leadVol: 0.6
+    },
+    l4: {
+      name: 'Nadelsturm', bpm: 128, swing: 0,
+      chords: [[40, 64, 67], [48, 64, 67], [50, 66, 69], [47, 66, 71]],
+      lead: [
+        [[76, 'bram', 1], [76, 'bram', 1], [74, 'brum', 1], [71, 'bram', 1], [67, 'brum', 1], [71, 'bram', 1], [74, 'brum', 2], null],
+        [[72, 'bram', 1], [72, 'bram', 1], [71, 'brum', 1], [67, 'bram', 1], [64, 'brum', 1], [67, 'bram', 1], [72, 'brum', 2], null],
+        [[74, 'dam', 1], [74, 'dam', 1], [78, 'dim', 1], [74, 'dam', 1], [69, 'dum', 1], [74, 'dam', 1], [78, 'dim', 2], null],
+        [[75, 'blam', 2], null, [71, 'blim', 1], [75, 'blam', 1], [78, 'blim', 2], null, [71, 'bum', 2], null]
+      ],
+      answer: [
+        [null, null, null, null, null, null, [52, 'dum', 1], [52, 'dum', 1]],
+        [null, null, null, null, null, null, [55, 'dum', 1], [55, 'dum', 1]],
+        [null, null, null, null, null, null, [57, 'dum', 1], [57, 'dum', 1]],
+        [null, null, null, null, [59, 'dum', 1], [59, 'dum', 1], [63, 'dum', 1], [66, 'dam', 1]]
+      ],
+      bass: [[0, 'dum', 1, 0], [1, 'dum', 1, 0], [2, 'dom', 1, 12], [3, 'dum', 1, 0], [4, 'dum', 1, 0], [5, 'dum', 1, 0], [6, 'dom', 1, 12], [7, 'dum', 1, 7]],
+      kick: [0, 2, 4, 6], snare: [2, 6], hats: 'eighth', choirFrom: 1, leadVol: 0.55
+    }
+  };
+  A.SONGS = SONGS;
+  let song = SONGS.menu, pendingSong = null;
 
-  function scheduleStep(B, t, n) {
+  function scheduleStep(B, t, n, S) {
+    const STEP = 60 / S.bpm / 2;
     const bar = Math.floor(n / 8) % 4;
     const st = n % 8;
     const round = Math.floor(n / 32);
     const jit = () => (Math.random() - 0.5) * 0.012;
-    // Beatbox
-    if (st === 0 || st === 5) beat(B, t + jit(), 'b', 0.9);
-    if (st === 2 || st === 6) beat(B, t + jit(), 'k', 0.5);
-    beat(B, t + jit(), st === 7 ? 'tss' : 'ts', st % 2 ? 0.16 : 0.24);
+    // Mund-Schlagzeug
+    if (S.kick.includes(st)) beat(B, t + jit(), 'b', 0.85);
+    if (S.snare.includes(st)) beat(B, t + jit(), 'k', 0.48);
+    if (S.hats === 'eighth' || st % 2 === 0) beat(B, t + jit(), st === 7 ? 'tss' : 'ts', st % 2 ? 0.15 : 0.22);
     // Männerstimme: Bass
-    const root = CHORDS[bar][0];
-    for (const [s, syl, len] of BASS) {
-      if (s === st) {
-        const off = syl === 'bom' ? 7 : syl === 'bam' ? 12 : 0;
-        sing(B, t + jit(), root + off, STEP * len * 0.92, syl, 'm', 0.55);
-      }
+    const root = S.chords[bar][0];
+    const bassVol = S.bass.length > 6 ? 0.42 : 0.55;
+    for (const [s, syl, len, off] of S.bass) {
+      if (s === st) sing(B, t + jit(), root + off, STEP * len * 0.9, syl, 'm', bassVol);
     }
-    // Chor: „Uuh“-Akkord pro Takt (erst ab dem zweiten Durchgang)
-    if (st === 0 && round >= 1) {
-      const ch = CHORDS[bar];
+    // Chor
+    if (st === 0 && round >= S.choirFrom) {
+      const ch = S.chords[bar];
       sing(B, t + 0.02 + Math.random() * 0.03, ch[1], STEP * 7.6, 'u', 'c', 0.32);
       sing(B, t + 0.03 + Math.random() * 0.03, ch[2], STEP * 7.6, 'o', 'c', 0.28);
       sing(B, t + 0.01 + Math.random() * 0.03, ch[0] + 12, STEP * 7.6, 'u', 'm', 0.18);
     }
-    // Frauenstimme: Melodie (jede dritte Runde Pause, damit es nicht nervt)
+    // Frauenstimme: Melodie (jede dritte Runde Pause)
     if (round % 3 !== 2) {
-      const ln = LEAD[bar][st];
-      if (ln) sing(B, t + jit(), ln[0], STEP * ln[2] * 0.9, ln[1], 'f', 0.62);
+      const ln = S.lead[bar][st];
+      if (ln) sing(B, t + jit(), ln[0], STEP * ln[2] * 0.9, ln[1], 'f', S.leadVol);
     }
-    // Männerstimme: Antwort
-    if (round % 2 === 1) {
-      const an = ANSWER[bar][st];
+    // Männerstimme: Antwort in jeder zweiten Runde
+    if (S.answer && round % 2 === 1) {
+      const an = S.answer[bar][st];
       if (an) sing(B, t + jit(), an[0], STEP * an[2] * 0.85, an[1], 'm', 0.42);
     }
   }
@@ -439,7 +514,13 @@
       if (!ctx || ctx.state !== 'running') return;
       if (nextNote < ctx.currentTime) nextNote = ctx.currentTime + 0.05;
       while (nextNote < ctx.currentTime + 0.35) {
-        if (musicOn) scheduleStep(B, nextNote + (noteIdx % 2 ? STEP * 0.12 : 0), noteIdx);
+        if (pendingSong && noteIdx % 8 === 0) {
+          song = SONGS[pendingSong] || song;
+          pendingSong = null;
+          noteIdx = 0;
+        }
+        const STEP = 60 / song.bpm / 2;
+        if (musicOn) scheduleStep(B, nextNote + (noteIdx % 2 ? STEP * song.swing : 0), noteIdx, song);
         nextNote += STEP;
         noteIdx++;
       }
@@ -447,13 +528,27 @@
   }
 
   // Für Tests: rendert die Musik offline und liefert Pegel-Werte
-  A.renderTest = async function (seconds) {
+  // Lied wechseln (passiert am nächsten Taktanfang, damit es nicht holpert)
+  A.setSong = function (id) {
+    if (!SONGS[id]) id = 'l1';
+    if (song === SONGS[id] && !pendingSong) return;
+    pendingSong = id;
+    if (!musicTimer) {
+      song = SONGS[id];
+      pendingSong = null;
+    }
+  };
+  A.currentSong = () => (pendingSong || Object.keys(SONGS).find((k) => SONGS[k] === song));
+
+  A.renderTest = async function (seconds, id) {
+    const S = SONGS[id || 'l1'];
+    const STEP = 60 / S.bpm / 2;
     const OAC = root.OfflineAudioContext || root.webkitOfflineAudioContext;
     const sr = 44100;
     const off = new OAC(2, Math.ceil(sr * seconds), sr);
     const TB = makeBus(off, off.destination);
     const steps = Math.floor(seconds / STEP);
-    for (let n = 0; n < steps; n++) scheduleStep(TB, 0.1 + n * STEP + (n % 2 ? STEP * 0.12 : 0), n);
+    for (let n = 0; n < steps; n++) scheduleStep(TB, 0.1 + n * STEP + (n % 2 ? STEP * S.swing : 0), n, S);
     const buf = await off.startRendering();
     const d = buf.getChannelData(0);
     let peak = 0, sum = 0, nan = 0;

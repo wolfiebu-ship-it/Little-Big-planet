@@ -41,6 +41,7 @@ python3 -m http.server 8000
 
 - **2.5D-Grafik**: echte 3D-Welt mit Licht und Schatten (Three.js), gespielt wird seitlich auf 3 Ebenen
 - **4 eigene Stoffpuppen** zur Auswahl: Knopf, Fransi, Socki, Bolzen, jeweils mit eigenen Farben
+- **Weltkarte**: genähter Stoff-Saturn mit Ring – Planet drehen, Level-Fähnchen antippen
 - **4 Story-Level**: Pappwiesen (Tutorial), Garnfabrik, Knopfgipfel, Nadelschlucht (schwer)
 - **3 Tiefenebenen**: Wechsle zwischen vorne, Mitte und hinten. Ebenen vor der Figur werden durchsichtig.
 - Kisten **schieben und greifen**, Sprungfedern, bewegliche Plattformen und Aufzüge, Stoffbretter zum Durchspringen
@@ -49,7 +50,7 @@ python3 -m http.server 8000
 - **Level-Editor** mit 18 Werkzeugen, 3 Ebenen, Rückgängig/Wiederholen, Themen, Größe ändern, Schildern mit eigenem Text, Testen, Speichern sowie Import/Export (Text oder Datei)
 - **Kostüm**: Farben für Wolle, Mütze und Knopfaugen
 - Tastatur, **Gamepad** und **Touch-Steuerung mit Joystick** (oben/unten wechselt die Ebene)
-- **A-cappella-Musik**: künstliche Männer-, Frauen- und Chorstimmen („bam, blim, brum“) plus Mund-Schlagzeug, eigene Komposition, live per WebAudio erzeugt
+- **A-cappella-Musik**: künstliche Männer-, Frauen- und Chorstimmen („bam, blim, brum“) plus Mund-Schlagzeug, fünf eigene Stücke (Planet + je ein Lied pro Level), live per WebAudio erzeugt
 
 ## Steuerung
 
